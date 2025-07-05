@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Big Red Stripe - Logline Evaluator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Montserrat', Verdana, sans-serif;
+        }
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #d9042b;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        .result-text {
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-white">
+    <!-- Header -->
+    <div class="bg-white border-b border-gray-200 px-6 py-6">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="logo-container">
+                <div class="bg-white">
+                    <img src="logo.png" alt="Big Red Stripe" style="height: auto; width: auto; max-width: 300px; max-height: 100px;">
+                </div>
+                <h1 class="text-2xl font-bold text-black">Logline Evaluator</h1>
+            </div>
+            <button id="downloadBtn" class="hidden flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg transition-colors">
+                <span>📥</span>
+                <span id="downloadText">Download Submissions (0)</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-6 py-8">
+        <!-- Form Section -->
+        <div id="formSection" class="bg-white rounded-lg shadow-lg p-8">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-black mb-4">Get Your Logline Evaluated</h2>
+                <p class="text-gray-600 text-lg">
+                    Submit your screenplay logline and get instant professional feedback plus three improved alternatives.
+                </p>
+            </div>
+
+            <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="genre" class="block text-sm font-semibold text-black mb-2">Genre</label>
+                        <input type="text" id="genre" placeholder="e.g., Psychological Thriller, Romantic Comedy" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required>
+                    </div>
+                    <div>
+                        <label for="tone" class="block text-sm font-semibold text-black mb-2">Tone</label>
+                        <input type="text" id="tone" placeholder="e.g., gritty, comedic, uplifting, psychological" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="mainCharacter" class="block text-sm font-semibold text-black mb-2">Main Character (Broad Strokes)</label>
+                    <textarea id="mainCharacter" placeholder="Who they are and what makes them unique or compelling" rows="3"
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required></textarea>
+                </div>
+
+                <div>
+                    <label for="incitingIncident" class="block text-sm font-semibold text-black mb-2">Setup or Inciting Incident Summary</label>
+                    <textarea id="incitingIncident" placeholder="What kicks off the story" rows="3"
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required></textarea>
+                </div>
+
+                <div>
+                    <label for="logline" class="block text-sm font-semibold text-black mb-2">Your Logline</label>
+                    <textarea id="logline" placeholder="Enter your current logline here" rows="4"
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required></textarea>
+                </div>
+
+                <button id="submitBtn" type="button" class="w-full font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                        style="background-color: #d9042b; color: white;">
+                    <span id="buttonText">Get My Evaluation</span>
+                    <span id="loadingSpinner" class="hidden spinner"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden space-y-6">
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-3xl font-bold text-black">Your Logline Evaluation</h2>
+                    <button id="resetBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg transition-colors">
+                        Evaluate Another Logline
+                    </button>
+                </div>
+
+                <div class="prose prose-lg max-w-none">
+                    <div class="bg-gray-50 p-6 rounded-lg mb-6">
+                        <h3 class="text-lg font-semibold text-black mb-2">Your Original Logline:</h3>
+                        <p id="originalLogline" class="text-gray-800 italic"></p>
+                    </div>
+
+                    <div id="evaluationResult" class="result-text text-gray-800 leading-relaxed"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let submissions = [];
+
+        const formSection = document.getElementById('formSection');
+        const resultsSection = document.getElementById('resultsSection');
+        const submitBtn = document.getElementById('submitBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const buttonText = document.getElementById('buttonText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+
+        function getFormData() {
+            return {
+                genre: document.getElementById('genre').value,
+                tone: document.getElementById('tone').value,
+                mainCharacter: document.getElementById('mainCharacter').value,
+                incitingIncident: document.getElementById('incitingIncident').value,
+                logline: document.getElementById('logline').value
+            };
+        }
+
+        async function handleSubmit() {
+            const formData = getFormData();
+            
+            // Validate form
+            if (!formData.genre || !formData.tone || !formData.mainCharacter || !formData.incitingIncident || !formData.logline) {
+                alert('Please fill in all fields before submitting.');
+                return;
+            }
+
+            // Show loading state
+            submitBtn.disabled = true;
+            buttonText.textContent = 'Evaluating Your Logline...';
+            loadingSpinner.classList.remove('hidden');
+
+            try {
+                console.log('Sending request to backend function...');
+                
+                // Call our Netlify function instead of Claude API directly
+                const response = await fetch('/.netlify/functions/evaluate-logline', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ formData })
+                });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Backend Error:', errorData);
+                    throw new Error(`Backend error: ${response.status} - ${errorData.error}`);
+                }
+
+                const data = await response.json();
+                console.log('Evaluation received');
+                
+                const claudeResponse = data.evaluation;
+                
+                // Save submission
+                const submissionData = {
+                    timestamp: new Date().toISOString(),
+                    formData: formData,
+                    claudeResponse: claudeResponse
+                };
+                submissions.push(submissionData);
+
+                // Show results
+                document.getElementById('originalLogline').textContent = `"${formData.logline}"`;
+                document.getElementById('evaluationResult').textContent = claudeResponse;
+                
+                formSection.classList.add('hidden');
+                resultsSection.classList.remove('hidden');
+
+                // Update download button
+                if (submissions.length > 0) {
+                    downloadBtn.classList.remove('hidden');
+                    document.getElementById('downloadText').textContent = `Download Submissions (${submissions.length})`;
+                }
+
+            } catch (error) {
+                console.error('Error evaluating logline:', error);
+                let errorMessage = 'Sorry, there was an error evaluating your logline. ';
+                
+                if (error.message.includes('401')) {
+                    errorMessage += 'API key issue - please contact support.';
+                } else if (error.message.includes('429')) {
+                    errorMessage += 'Too many requests. Please wait a moment and try again.';
+                } else if (error.message.includes('500')) {
+                    errorMessage += 'Server error. Please try again later.';
+                } else {
+                    errorMessage += 'Please check your internet connection and try again.';
+                }
+                
+                alert(errorMessage);
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                buttonText.textContent = 'Get My Evaluation';
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('genre').value = '';
+            document.getElementById('tone').value = '';
+            document.getElementById('mainCharacter').value = '';
+            document.getElementById('incitingIncident').value = '';
+            document.getElementById('logline').value = '';
+            
+            formSection.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+        }
+
+        function downloadSubmissions() {
+            if (submissions.length === 0) {
+                alert('No submissions to download yet.');
+                return;
+            }
+
+            const csvContent = submissions.map(sub => {
+                return [
+                    sub.timestamp,
+                    `"${sub.formData.genre}"`,
+                    `"${sub.formData.tone}"`,
+                    `"${sub.formData.mainCharacter.replace(/"/g, '""')}"`,
+                    `"${sub.formData.incitingIncident.replace(/"/g, '""')}"`,
+                    `"${sub.formData.logline.replace(/"/g, '""')}"`,
+                    `"${sub.claudeResponse.replace(/"/g, '""')}"`
+                ].join(',');
+            });
+
+            const header = 'Timestamp,Genre,Tone,Main Character,Inciting Incident,Original Logline,Claude Response';
+            const csv = [header, ...csvContent].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `logline-submissions-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Event listeners
+        submitBtn.addEventListener('click', handleSubmit);
+        resetBtn.addEventListener('click', resetForm);
+        downloadBtn.addEventListener('click', downloadSubmissions);
+    </script>
+</body>
+</html>
