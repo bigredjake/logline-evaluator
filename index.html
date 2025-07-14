@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Big Red Stripe - Logline Evaluator</title>
+    <title>BRS Labs - Logline Evaluator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -21,146 +21,630 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .logo-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-        }
-        .result-text {
-            white-space: pre-wrap;
-            line-height: 1.6;
-        }
     </style>
 </head>
-<body class="min-h-screen bg-white">
-    <!-- Header -->
-    <div class="bg-white border-b border-gray-200 px-6 py-6">
-        <div class="max-w-4xl mx-auto flex items-center justify-between">
-            <div class="logo-container">
-                <div class="bg-white">
-                    <img src="logo.png" alt="Big Red Stripe" style="height: auto; width: auto; max-width: 300px; max-height: 100px;">
+<body class="min-h-screen bg-gray-50">
+    <!-- Authentication Section -->
+    <div id="authSection" class="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <div>
+                <div class="mx-auto h-12 w-auto flex justify-center">
+                    <img src="logo.png" alt="BRS Labs" style="height: auto; width: auto; max-height: 48px; max-width: 200px;">
                 </div>
-                <h1 class="text-2xl font-bold text-black">Logline Evaluator</h1>
-            </div>
-            <button id="downloadBtn" class="hidden flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg transition-colors">
-                <span>📥</span>
-                <span id="downloadText">Download Submissions (0)</span>
-            </button>
-        </div>
-    </div>
-
-    <div class="max-w-4xl mx-auto px-6 py-8">
-        <!-- Form Section -->
-        <div id="formSection" class="bg-white rounded-lg shadow-lg p-8">
-            <div class="mb-8">
-                <h2 class="text-3xl font-bold text-black mb-4">Get Your Logline Evaluated</h2>
-                <p class="text-gray-600 text-lg">
-                    Submit your screenplay logline and get instant professional feedback plus three improved alternatives.
+                <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                    Logline Evaluator
+                </h2>
+                <p id="authSubtitle" class="mt-2 text-center text-sm text-gray-600">
+                    Sign in to your account
                 </p>
             </div>
 
-            <div class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="mt-8 space-y-6">
+                <div class="space-y-4">
                     <div>
-                        <label for="genre" class="block text-sm font-semibold text-black mb-2">Genre</label>
-                        <input type="text" id="genre" placeholder="e.g., Psychological Thriller, Romantic Comedy" 
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required>
+                        <input type="email" id="authEmail" placeholder="Email address" required
+                               class="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500">
                     </div>
-                    <div>
-                        <label for="tone" class="block text-sm font-semibold text-black mb-2">Tone</label>
-                        <input type="text" id="tone" placeholder="e.g., gritty, comedic, uplifting, psychological" 
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required>
+                    <div class="relative">
+                        <input type="password" id="authPassword" placeholder="Password" required
+                               class="relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500">
+                        <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                            <span id="eyeIcon">👁️</span>
+                        </button>
+                    </div>
+                    
+                    <div id="registerFields" class="hidden space-y-4">
+                        <div>
+                            <input type="password" id="confirmPassword" placeholder="Confirm password" required
+                                   class="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500">
+                        </div>
+                        <div>
+                            <input type="text" id="studentCode" placeholder="Student code (optional)"
+                                   class="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500">
+                            <p class="text-xs text-gray-500 mt-1">Have a student code? Enter it for 3 months free access!</p>
+                        </div>
                     </div>
                 </div>
 
                 <div>
-                    <label for="mainCharacter" class="block text-sm font-semibold text-black mb-2">Main Character (Broad Strokes)</label>
-                    <textarea id="mainCharacter" placeholder="Who they are and what makes them unique or compelling" rows="3"
-                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required></textarea>
-                </div>
-
-                <div>
-                    <label for="incitingIncident" class="block text-sm font-semibold text-black mb-2">Setup or Inciting Incident Summary</label>
-                    <textarea id="incitingIncident" placeholder="What kicks off the story" rows="3"
-                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required></textarea>
-                </div>
-
-                <div>
-                    <label for="logline" class="block text-sm font-semibold text-black mb-2">Your Logline</label>
-                    <textarea id="logline" placeholder="Enter your current logline here" rows="4"
-                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required></textarea>
-                </div>
-
-                <button id="submitBtn" type="button" class="w-full font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
-                        style="background-color: #d9042b; color: white;">
-                    <span id="buttonText">Get My Evaluation</span>
-                    <span id="loadingSpinner" class="hidden spinner"></span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Results Section -->
-        <div id="resultsSection" class="hidden space-y-6">
-            <div class="bg-white rounded-lg shadow-lg p-8">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-3xl font-bold text-black">Your Logline Evaluation</h2>
-                    <button id="resetBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg transition-colors">
-                        Evaluate Another Logline
+                    <button id="authSubmit" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2"
+                            style="background-color: #d9042b;">
+                        <span id="authButtonText">Sign In</span>
+                        <span id="authSpinner" class="hidden spinner ml-2"></span>
                     </button>
                 </div>
 
-                <div class="prose prose-lg max-w-none">
-                    <div class="bg-gray-50 p-6 rounded-lg mb-6">
-                        <h3 class="text-lg font-semibold text-black mb-2">Your Original Logline:</h3>
-                        <p id="originalLogline" class="text-gray-800 italic"></p>
+                <div class="text-center">
+                    <button id="authToggle" class="text-red-600 hover:text-red-500 text-sm">
+                        Don't have an account? Sign up
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Section -->
+    <div id="appSection" class="hidden min-h-screen bg-gray-50">
+        <!-- Header -->
+        <div class="bg-white border-b border-gray-200 px-6 py-4">
+            <div class="max-w-6xl mx-auto flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <img src="logo.png" alt="BRS Labs" style="height: auto; width: auto; max-height: 32px; max-width: 150px;">
+                    <h1 class="text-xl font-bold text-black">Logline Evaluator</h1>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <div id="userInfo" class="text-sm"></div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <button id="adminBtn" class="hidden p-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100" title="Admin Panel">
+                            ⚙️
+                        </button>
+                        <button id="appBtn" class="p-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100" title="Evaluate Loglines">
+                            ✍️
+                        </button>
+                        <button id="purchaseBtn" class="hidden p-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100" title="Purchase Credits">
+                            💳
+                        </button>
+                        <button id="logoutBtn" class="p-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100" title="Logout">
+                            🚪
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent">
+            <!-- Logline Form -->
+            <div id="loglineSection" class="max-w-4xl mx-auto px-6 py-8">
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-black mb-4">Get Logline Feedback</h2>
+                        <p class="text-gray-600 text-lg">
+                            Submit the logline information you know and get feedback plus five improved alternatives and title suggestions.
+                        </p>
                     </div>
 
-                    <div id="evaluationResult" class="result-text text-gray-800 leading-relaxed"></div>
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="genre" class="block text-sm font-semibold text-black mb-2">Genre</label>
+                                <input type="text" id="genre" placeholder="e.g., Psychological Thriller, Romantic Comedy" 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required>
+                            </div>
+                            <div>
+                                <label for="tone" class="block text-sm font-semibold text-black mb-2">Tone</label>
+                                <input type="text" id="tone" placeholder="e.g., gritty, comedic, uplifting, psychological" 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="mainCharacter" class="block text-sm font-semibold text-black mb-2">Protagonist (broad strokes)</label>
+                            <textarea id="mainCharacter" placeholder="Who they are and what makes them unique or compelling" rows="3"
+                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required></textarea>
+                        </div>
+
+                        <div>
+                            <label for="antagonist" class="block text-sm font-semibold text-black mb-2">Antagonist / Antagonistic Force (broad strokes)</label>
+                            <textarea id="antagonist" placeholder="The person, group, or environmental factor along with what they want" rows="3"
+                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required></textarea>
+                        </div>
+
+                        <div>
+                            <label for="incitingIncident" class="block text-sm font-semibold text-black mb-2">Setup or Inciting Incident Summary</label>
+                            <textarea id="incitingIncident" placeholder="What kicks off the story" rows="3"
+                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required></textarea>
+                        </div>
+
+                        <div>
+                            <label for="storyDetails" class="block text-sm font-semibold text-black mb-2">1-2 Interesting Details About the Story</label>
+                            <textarea id="storyDetails" placeholder="Any elements unique to the world of the story" rows="3"
+                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required></textarea>
+                        </div>
+
+                        <div>
+                            <label for="logline" class="block text-sm font-semibold text-black mb-2">Your Logline</label>
+                            <textarea id="logline" placeholder="Enter your current logline here" rows="4"
+                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required></textarea>
+                        </div>
+
+                        <button id="evaluateBtn" type="button" class="w-full font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                                style="background-color: #d9042b; color: white;">
+                            <span id="evaluateText">Get My Evaluation</span>
+                            <span id="evaluateSpinner" class="hidden spinner"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="hidden max-w-4xl mx-auto px-6 py-8">
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-3xl font-bold text-black">Your Logline Evaluation</h2>
+                        <button id="resetBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg transition-colors">
+                            Evaluate Another Logline
+                        </button>
+                    </div>
+
+                    <div class="prose prose-lg max-w-none">
+                        <div class="bg-gray-50 p-6 rounded-lg mb-6">
+                            <h3 class="text-lg font-semibold text-black mb-2">Your Original Logline:</h3>
+                            <p id="originalLogline" class="text-gray-800 italic"></p>
+                        </div>
+
+                        <div id="evaluationResult" class="whitespace-pre-wrap text-gray-800 leading-relaxed"></div>
+                        
+                        <hr class="my-8 border-gray-300">
+                        
+                        <div class="bg-blue-50 p-6 rounded-lg">
+                            <p class="text-gray-700 text-base leading-relaxed">
+                                The Logline Evaluator is meant to help you hone and craft your logline. For better results, consider choosing one of the suggestions or a combination of the suggestions, and running that new logline through the evaluator.
+                            </p>
+                        </div>
+                        
+                        <hr class="my-6 border-gray-300">
+                        
+                        <div class="text-center">
+                            <p class="text-gray-700">
+                                If you want to learn how to write Hollywood-quality screenplays, <a href="https://sales.bigredstripe.com/crucible/?video=LoglineEvaluatorLink" target="_blank" rel="noopener noreferrer" class="text-red-600 hover:text-red-800 underline">click here</a>.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purchase Section -->
+            <div id="purchaseSection" class="hidden max-w-4xl mx-auto px-6 py-8">
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <h2 class="text-3xl font-bold text-black mb-6">Purchase Credits</h2>
+                    <p class="text-gray-600 mb-8">Choose a credit package to evaluate your loglines</p>
+
+                    <div id="betaDiscount" class="hidden bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                        <h3 class="text-green-800 font-semibold">🎉 Beta Tester Discount!</h3>
+                        <p class="text-green-700">Get 50% off your first purchase as an early supporter!</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="border border-gray-200 rounded-lg p-6 text-center">
+                            <h3 class="text-xl font-bold mb-2">Starter Pack</h3>
+                            <div class="text-3xl font-bold text-red-600 mb-2" id="price25">$30</div>
+                            <div class="text-gray-600 mb-4">25 Evaluations</div>
+                            <button onclick="purchaseCredits(25)" class="w-full py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                    style="background-color: #d9042b;">
+                                Purchase
+                            </button>
+                        </div>
+
+                        <div class="border-2 border-red-600 rounded-lg p-6 text-center relative">
+                            <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-3 py-1 rounded-full text-sm">
+                                Best Value
+                            </div>
+                            <h3 class="text-xl font-bold mb-2">Pro Pack</h3>
+                            <div class="text-3xl font-bold text-red-600 mb-2" id="price50">$55</div>
+                            <div class="text-gray-600 mb-4">50 Evaluations</div>
+                            <button onclick="purchaseCredits(50)" class="w-full py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                    style="background-color: #d9042b;">
+                                Purchase
+                            </button>
+                        </div>
+
+                        <div class="border border-gray-200 rounded-lg p-6 text-center">
+                            <h3 class="text-xl font-bold mb-2">Writer Pack</h3>
+                            <div class="text-3xl font-bold text-red-600 mb-2" id="price100">$100</div>
+                            <div class="text-gray-600 mb-4">100 Evaluations</div>
+                            <button onclick="purchaseCredits(100)" class="w-full py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                    style="background-color: #d9042b;">
+                                Purchase
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 text-center text-sm text-gray-500">
+                        Credits never expire. Secure payment processing by Stripe.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Section -->
+            <div id="adminSection" class="hidden max-w-6xl mx-auto px-6 py-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Student Codes -->
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <h2 class="text-2xl font-bold mb-6">Generate Student Codes</h2>
+                        
+                        <div class="space-y-4 mb-6">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                                    <input type="number" id="codeQuantity" min="1" value="1"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Months</label>
+                                    <input type="number" id="codeMonths" min="1" value="3"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500">
+                                </div>
+                            </div>
+                            <button onclick="generateStudentCodes()" class="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                                    style="background-color: #d9042b;">
+                                Generate Codes
+                            </button>
+                        </div>
+
+                        <button onclick="downloadCodes()" class="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg">
+                            <span>📥</span>
+                            <span id="codesCount">Download Codes (0)</span>
+                        </button>
+                    </div>
+
+                    <!-- Analytics -->
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <h2 class="text-2xl font-bold mb-6">Analytics</h2>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <div class="text-2xl font-bold text-red-600" id="totalUsers">0</div>
+                                <div class="text-sm text-gray-600">Total Users</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <div class="text-2xl font-bold text-red-600" id="totalEvaluations">0</div>
+                                <div class="text-sm text-gray-600">Total Evaluations</div>
+                            </div>
+                        </div>
+
+                        <button onclick="downloadSubmissions()" class="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg">
+                            <span>📥</span>
+                            <span id="submissionsCount">Download Submissions (0)</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        let submissions = [];
+        // Global state
+        let currentUser = null;
+        let currentView = 'login';
+        let isLoading = false;
+        
+        // Mock database (in real app, this would be backend API calls)
+        let mockDB = {
+            users: [{
+                id: 'admin-001',
+                email: 'jacob@bigredstripe.com',
+                password: 'admin123',
+                userType: 'admin',
+                credits: 999999,
+                accessExpiry: null,
+                createdAt: new Date().toISOString(),
+                isAdmin: true
+            }],
+            submissions: [],
+            studentCodes: []
+        };
 
-        const formSection = document.getElementById('formSection');
-        const resultsSection = document.getElementById('resultsSection');
-        const submitBtn = document.getElementById('submitBtn');
-        const resetBtn = document.getElementById('resetBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const buttonText = document.getElementById('buttonText');
-        const loadingSpinner = document.getElementById('loadingSpinner');
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load saved data
+            const savedUser = localStorage.getItem('brs_user');
+            const savedDB = localStorage.getItem('brs_db');
+            
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showApp();
+            }
+            
+            if (savedDB) {
+                mockDB = JSON.parse(savedDB);
+            } else {
+                localStorage.setItem('brs_db', JSON.stringify(mockDB));
+            }
 
-        function getFormData() {
-            return {
+            setupEventListeners();
+            updateUI();
+        });
+
+        function setupEventListeners() {
+            // Auth listeners
+            document.getElementById('authToggle').addEventListener('click', toggleAuthMode);
+            document.getElementById('authSubmit').addEventListener('click', handleAuth);
+            document.getElementById('togglePassword').addEventListener('click', togglePasswordVisibility);
+            
+            // Navigation listeners
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+            document.getElementById('appBtn').addEventListener('click', () => showSection('logline'));
+            document.getElementById('purchaseBtn').addEventListener('click', () => showSection('purchase'));
+            document.getElementById('adminBtn').addEventListener('click', () => showSection('admin'));
+            
+            // App listeners
+            document.getElementById('evaluateBtn').addEventListener('click', evaluateLogline);
+            document.getElementById('resetBtn').addEventListener('click', resetForm);
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('brs_user', JSON.stringify(currentUser));
+            localStorage.setItem('brs_db', JSON.stringify(mockDB));
+        }
+
+        function toggleAuthMode() {
+            currentView = currentView === 'login' ? 'register' : 'login';
+            const registerFields = document.getElementById('registerFields');
+            const subtitle = document.getElementById('authSubtitle');
+            const buttonText = document.getElementById('authButtonText');
+            const toggleText = document.getElementById('authToggle');
+
+            if (currentView === 'register') {
+                registerFields.classList.remove('hidden');
+                subtitle.textContent = 'Create your account';
+                buttonText.textContent = 'Create Account';
+                toggleText.textContent = 'Already have an account? Sign in';
+            } else {
+                registerFields.classList.add('hidden');
+                subtitle.textContent = 'Sign in to your account';
+                buttonText.textContent = 'Sign In';
+                toggleText.textContent = "Don't have an account? Sign up";
+            }
+        }
+
+        function togglePasswordVisibility() {
+            const passwordField = document.getElementById('authPassword');
+            const eyeIcon = document.getElementById('eyeIcon');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                eyeIcon.textContent = '🙈';
+            } else {
+                passwordField.type = 'password';
+                eyeIcon.textContent = '👁️';
+            }
+        }
+
+        async function handleAuth() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+
+            if (!email || !password) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            if (currentView === 'register') {
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                const studentCode = document.getElementById('studentCode').value;
+
+                if (password !== confirmPassword) {
+                    alert('Passwords do not match');
+                    return;
+                }
+
+                if (mockDB.users.find(u => u.email === email)) {
+                    alert('Email already exists');
+                    return;
+                }
+
+                await register(email, password, studentCode);
+            } else {
+                await login(email, password);
+            }
+        }
+
+        async function login(email, password) {
+            setLoading(true);
+            
+            const user = mockDB.users.find(u => u.email === email && u.password === password);
+            
+            if (user) {
+                currentUser = user;
+                saveToStorage();
+                showApp();
+            } else {
+                alert('Invalid email or password');
+            }
+            
+            setLoading(false);
+        }
+
+        async function register(email, password, studentCode) {
+            setLoading(true);
+            
+            let userType = 'credits';
+            let credits = 0;
+            let accessExpiry = null;
+
+            // Check student code
+            if (studentCode) {
+                const code = mockDB.studentCodes.find(c => c.code === studentCode && !c.used);
+                if (code) {
+                    userType = 'student';
+                    const expiry = new Date();
+                    expiry.setMonth(expiry.getMonth() + code.months);
+                    accessExpiry = expiry.toISOString();
+
+                    // Mark code as used
+                    code.used = true;
+                    code.usedBy = email;
+                    code.usedAt = new Date().toISOString();
+                } else {
+                    alert('Invalid or already used student code');
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            const newUser = {
+                id: Date.now().toString(),
+                email,
+                password,
+                userType,
+                credits,
+                accessExpiry,
+                createdAt: new Date().toISOString(),
+                isAdmin: email === 'jacob@bigredstripe.com'
+            };
+
+            mockDB.users.push(newUser);
+            currentUser = newUser;
+            saveToStorage();
+            showApp();
+            setLoading(false);
+        }
+
+        function setLoading(loading) {
+            isLoading = loading;
+            const button = document.getElementById('authSubmit');
+            const spinner = document.getElementById('authSpinner');
+            
+            button.disabled = loading;
+            if (loading) {
+                spinner.classList.remove('hidden');
+            } else {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function showApp() {
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('appSection').classList.remove('hidden');
+            showSection('logline');
+            updateUI();
+        }
+
+        function showSection(section) {
+            // Hide all sections
+            document.getElementById('loglineSection').classList.add('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('purchaseSection').classList.add('hidden');
+            document.getElementById('adminSection').classList.add('hidden');
+
+            // Show requested section
+            if (section === 'logline') {
+                document.getElementById('loglineSection').classList.remove('hidden');
+            } else if (section === 'purchase') {
+                document.getElementById('purchaseSection').classList.remove('hidden');
+                updatePurchaseSection();
+            } else if (section === 'admin' && currentUser.isAdmin) {
+                document.getElementById('adminSection').classList.remove('hidden');
+                updateAdminSection();
+            }
+        }
+
+        function updateUI() {
+            if (!currentUser) return;
+
+            // Update header user info
+            const userInfo = document.getElementById('userInfo');
+            if (currentUser.userType === 'credits') {
+                userInfo.innerHTML = `<span class="font-medium">Credits: ${currentUser.credits}</span>`;
+                if (currentUser.credits <= 5) {
+                    userInfo.innerHTML += ` <button onclick="showSection('purchase')" class="ml-2 text-red-600 hover:text-red-800 underline">Buy More</button>`;
+                }
+                document.getElementById('purchaseBtn').classList.remove('hidden');
+            } else if (currentUser.userType === 'student') {
+                const active = new Date(currentUser.accessExpiry) > new Date();
+                userInfo.innerHTML = `<span class="font-medium text-green-600">Student Access ${active ? 'Active' : 'Expired'}</span>`;
+                if (!active) {
+                    document.getElementById('purchaseBtn').classList.remove('hidden');
+                }
+            } else if (currentUser.userType === 'admin') {
+                userInfo.innerHTML = `<span class="font-medium text-purple-600">Admin - Unlimited</span>`;
+            }
+
+            // Show admin button for admin users
+            if (currentUser.isAdmin) {
+                document.getElementById('adminBtn').classList.remove('hidden');
+            }
+        }
+
+        function updatePurchaseSection() {
+            // Check if user is eligible for beta discount
+            const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id).length;
+            const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
+            
+            if (isBeta) {
+                document.getElementById('betaDiscount').classList.remove('hidden');
+                document.getElementById('price25').textContent = '$15';
+                document.getElementById('price50').textContent = '$28';
+                document.getElementById('price100').textContent = '$50';
+            } else {
+                document.getElementById('betaDiscount').classList.add('hidden');
+                document.getElementById('price25').textContent = '$30';
+                document.getElementById('price50').textContent = '$55';
+                document.getElementById('price100').textContent = '$100';
+            }
+        }
+
+        function updateAdminSection() {
+            document.getElementById('totalUsers').textContent = mockDB.users.filter(u => !u.isAdmin).length;
+            document.getElementById('totalEvaluations').textContent = mockDB.submissions.length;
+            document.getElementById('codesCount').textContent = `Download Codes (${mockDB.studentCodes.length})`;
+            document.getElementById('submissionsCount').textContent = `Download Submissions (${mockDB.submissions.length})`;
+        }
+
+        async function evaluateLogline() {
+            const formData = {
                 genre: document.getElementById('genre').value,
                 tone: document.getElementById('tone').value,
                 mainCharacter: document.getElementById('mainCharacter').value,
+                antagonist: document.getElementById('antagonist').value,
                 incitingIncident: document.getElementById('incitingIncident').value,
+                storyDetails: document.getElementById('storyDetails').value,
                 logline: document.getElementById('logline').value
             };
-        }
 
-        async function handleSubmit() {
-            const formData = getFormData();
-            
-            // Validate form
-            if (!formData.genre || !formData.tone || !formData.mainCharacter || !formData.incitingIncident || !formData.logline) {
+            // Validate all fields
+            if (!formData.genre || !formData.tone || !formData.mainCharacter || !formData.antagonist || !formData.incitingIncident || !formData.storyDetails || !formData.logline) {
                 alert('Please fill in all fields before submitting.');
                 return;
             }
 
+            // Check user access
+            if (currentUser.userType === 'credits' && currentUser.credits <= 0) {
+                alert('You have no credits remaining. Please purchase more credits to continue.');
+                showSection('purchase');
+                return;
+            }
+
+            if (currentUser.userType === 'student' && new Date(currentUser.accessExpiry) < new Date()) {
+                alert('Your student access has expired. Please purchase credits to continue.');
+                showSection('purchase');
+                return;
+            }
+
             // Show loading state
-            submitBtn.disabled = true;
-            buttonText.textContent = 'Evaluating Your Logline...';
-            loadingSpinner.classList.remove('hidden');
+            const button = document.getElementById('evaluateBtn');
+            const text = document.getElementById('evaluateText');
+            const spinner = document.getElementById('evaluateSpinner');
+            
+            button.disabled = true;
+            text.textContent = 'Evaluating Your Logline...';
+            spinner.classList.remove('hidden');
 
             try {
-                console.log('Sending request to backend function...');
-                
-                // Call our Netlify function instead of Claude API directly
+                // Call backend function
                 const response = await fetch('/.netlify/functions/evaluate-logline', {
                     method: 'POST',
                     headers: {
@@ -169,108 +653,207 @@
                     body: JSON.stringify({ formData })
                 });
 
-                console.log('Response status:', response.status);
-
                 if (!response.ok) {
                     const errorData = await response.json();
-                    console.error('Backend Error:', errorData);
                     throw new Error(`Backend error: ${response.status} - ${errorData.error}`);
                 }
 
                 const data = await response.json();
-                console.log('Evaluation received');
-                
                 const claudeResponse = data.evaluation;
-                
+
+                // Update user credits
+                if (currentUser.userType === 'credits') {
+                    currentUser.credits -= 1;
+                    
+                    // Check for low credit alerts
+                    if (currentUser.credits === 10 || currentUser.credits === 5) {
+                        setTimeout(() => alert(`You have ${currentUser.credits} credits remaining. Consider purchasing more!`), 2000);
+                    } else if (currentUser.credits === 0) {
+                        setTimeout(() => alert('You\'re out of credits! Purchase more to continue using the evaluator.'), 2000);
+                    }
+                }
+
                 // Save submission
-                const submissionData = {
+                const submission = {
+                    id: Date.now().toString(),
                     timestamp: new Date().toISOString(),
-                    formData: formData,
-                    claudeResponse: claudeResponse
+                    userId: currentUser.id,
+                    userEmail: currentUser.email,
+                    formData,
+                    claudeResponse
                 };
-                submissions.push(submissionData);
+
+                mockDB.submissions.push(submission);
+                
+                // Update user in database
+                const userIndex = mockDB.users.findIndex(u => u.id === currentUser.id);
+                if (userIndex !== -1) {
+                    mockDB.users[userIndex] = currentUser;
+                }
+
+                saveToStorage();
 
                 // Show results
                 document.getElementById('originalLogline').textContent = `"${formData.logline}"`;
                 document.getElementById('evaluationResult').textContent = claudeResponse;
                 
-                formSection.classList.add('hidden');
-                resultsSection.classList.remove('hidden');
+                document.getElementById('loglineSection').classList.add('hidden');
+                document.getElementById('resultsSection').classList.remove('hidden');
 
-                // Update download button
-                if (submissions.length > 0) {
-                    downloadBtn.classList.remove('hidden');
-                    document.getElementById('downloadText').textContent = `Download Submissions (${submissions.length})`;
-                }
+                updateUI();
 
             } catch (error) {
                 console.error('Error evaluating logline:', error);
-                let errorMessage = 'Sorry, there was an error evaluating your logline. ';
-                
-                if (error.message.includes('401')) {
-                    errorMessage += 'API key issue - please contact support.';
-                } else if (error.message.includes('429')) {
-                    errorMessage += 'Too many requests. Please wait a moment and try again.';
-                } else if (error.message.includes('500')) {
-                    errorMessage += 'Server error. Please try again later.';
-                } else {
-                    errorMessage += 'Please check your internet connection and try again.';
-                }
-                
-                alert(errorMessage);
+                alert('Sorry, there was an error evaluating your logline. Please try again.');
             } finally {
                 // Reset button state
-                submitBtn.disabled = false;
-                buttonText.textContent = 'Get My Evaluation';
-                loadingSpinner.classList.add('hidden');
+                button.disabled = false;
+                text.textContent = 'Get My Evaluation';
+                spinner.classList.add('hidden');
             }
         }
 
         function resetForm() {
+            // Clear form
             document.getElementById('genre').value = '';
             document.getElementById('tone').value = '';
             document.getElementById('mainCharacter').value = '';
+            document.getElementById('antagonist').value = '';
             document.getElementById('incitingIncident').value = '';
+            document.getElementById('storyDetails').value = '';
             document.getElementById('logline').value = '';
             
-            formSection.classList.remove('hidden');
-            resultsSection.classList.add('hidden');
+            // Show form, hide results
+            document.getElementById('loglineSection').classList.remove('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+        }
+
+        function logout() {
+            localStorage.removeItem('brs_user');
+            currentUser = null;
+            currentView = 'login';
+            
+            document.getElementById('appSection').classList.add('hidden');
+            document.getElementById('authSection').classList.remove('hidden');
+            
+            // Reset auth form
+            document.getElementById('authEmail').value = '';
+            document.getElementById('authPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('studentCode').value = '';
+            
+            // Reset to login mode
+            if (currentView !== 'login') {
+                toggleAuthMode();
+            }
+        }
+
+        // Purchase Functions (simplified - in real app, integrate with Stripe)
+        function purchaseCredits(amount) {
+            const prices = { 25: 30, 50: 55, 100: 100 };
+            const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id).length;
+            const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
+            const finalPrice = isBeta ? prices[amount] / 2 : prices[amount];
+
+            if (confirm(`Purchase ${amount} credits for ${finalPrice}?${isBeta ? ' (50% Beta Tester Discount!)' : ''}`)) {
+                currentUser.credits += amount;
+                
+                // Update user in database
+                const userIndex = mockDB.users.findIndex(u => u.id === currentUser.id);
+                if (userIndex !== -1) {
+                    mockDB.users[userIndex] = currentUser;
+                }
+                
+                saveToStorage();
+                updateUI();
+                updatePurchaseSection();
+                alert(`Successfully purchased ${amount} credits!`);
+            }
+        }
+
+        // Admin Functions
+        function generateStudentCodes() {
+            const quantity = parseInt(document.getElementById('codeQuantity').value) || 1;
+            const months = parseInt(document.getElementById('codeMonths').value) || 3;
+
+            const newCodes = [];
+            for (let i = 0; i < quantity; i++) {
+                const code = 'STUDENT-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+                newCodes.push({
+                    id: Date.now().toString() + i,
+                    code,
+                    months,
+                    createdAt: new Date().toISOString(),
+                    used: false
+                });
+            }
+
+            mockDB.studentCodes.push(...newCodes);
+            saveToStorage();
+            updateAdminSection();
+            
+            alert(`Generated ${quantity} codes for ${months} months each!\n\nCodes: ${newCodes.map(c => c.code).join(', ')}`);
         }
 
         function downloadSubmissions() {
-            if (submissions.length === 0) {
+            if (mockDB.submissions.length === 0) {
                 alert('No submissions to download yet.');
                 return;
             }
 
-            const csvContent = submissions.map(sub => {
+            const csvContent = mockDB.submissions.map(sub => {
                 return [
                     sub.timestamp,
+                    sub.userEmail,
                     `"${sub.formData.genre}"`,
                     `"${sub.formData.tone}"`,
                     `"${sub.formData.mainCharacter.replace(/"/g, '""')}"`,
+                    `"${sub.formData.antagonist.replace(/"/g, '""')}"`,
                     `"${sub.formData.incitingIncident.replace(/"/g, '""')}"`,
+                    `"${sub.formData.storyDetails.replace(/"/g, '""')}"`,
                     `"${sub.formData.logline.replace(/"/g, '""')}"`,
                     `"${sub.claudeResponse.replace(/"/g, '""')}"`
                 ].join(',');
             });
 
-            const header = 'Timestamp,Genre,Tone,Main Character,Inciting Incident,Original Logline,Claude Response';
+            const header = 'Timestamp,User Email,Genre,Tone,Protagonist,Antagonist,Inciting Incident,Story Details,Original Logline,Claude Response';
             const csv = [header, ...csvContent].join('\n');
 
-            const blob = new Blob([csv], { type: 'text/csv' });
+            downloadCSV(csv, `logline-submissions-${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        function downloadCodes() {
+            if (mockDB.studentCodes.length === 0) {
+                alert('No codes to download yet.');
+                return;
+            }
+
+            const csvContent = mockDB.studentCodes.map(code => {
+                return [
+                    code.code,
+                    code.months,
+                    code.createdAt,
+                    code.used ? 'Yes' : 'No',
+                    code.usedBy || '',
+                    code.usedAt || ''
+                ].join(',');
+            });
+
+            const header = 'Code,Months,Created,Used,Used By,Used At';
+            const csv = [header, ...csvContent].join('\n');
+
+            downloadCSV(csv, `student-codes-${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        function downloadCSV(csvContent, filename) {
+            const blob = new Blob([csvContent], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `logline-submissions-${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = filename;
             a.click();
             window.URL.revokeObjectURL(url);
         }
-
-        // Event listeners
-        submitBtn.addEventListener('click', handleSubmit);
-        resetBtn.addEventListener('click', resetForm);
-        downloadBtn.addEventListener('click', downloadSubmissions);
     </script>
 </body>
 </html>
