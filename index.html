@@ -844,27 +844,26 @@
         }
 
         function purchaseCredits(amount) {
-            const prices = { 25: 30, 50: 55, 100: 100 };
-            const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id).length;
-            const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
-            const finalPrice = isBeta ? prices[amount] / 2 : prices[amount];
+    const prices = { 25: 30, 50: 55, 100: 100 };
+    const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id).length;
+    const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
+    const finalPrice = isBeta ? prices[amount] / 2 : prices[amount];
 
-            if (confirm(`Purchase ${amount} credits for ${finalPrice}?${isBeta ? ' (50% Beta Tester Discount!)' : ''}`)) {
-                // In real app, this would integrate with Stripe
-                currentUser.credits += amount;
-                
-                // Update user in database
-                const userIndex = mockDB.users.findIndex(u => u.id === currentUser.id);
-                if (userIndex !== -1) {
-                    mockDB.users[userIndex] = currentUser;
-                }
-                
-                saveToStorage();
-                updateUI();
-                updatePurchaseSection();
-                alert(`Successfully purchased ${amount} credits!`);
-            }
+    const discountText = isBeta ? ' (50% Beta Tester Discount!)' : '';
+    if (confirm('Purchase ' + amount + ' credits for $' + finalPrice + '?' + discountText)) {
+        currentUser.credits += amount;
+        
+        const userIndex = mockDB.users.findIndex(u => u.id === currentUser.id);
+        if (userIndex !== -1) {
+            mockDB.users[userIndex] = currentUser;
         }
+        
+        saveToStorage();
+        updateUI();
+        updatePurchaseSection();
+        alert('Successfully purchased ' + amount + ' credits!');
+    }
+}
 
         function logout() {
             localStorage.removeItem('brs_user');
