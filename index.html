@@ -7,6 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+<script>
+  (function(){
+    emailjs.init("7cimGrBdIHCn4gSDy");
+  })();
+</script>
     <script src="https://js.stripe.com/v3/"></script>
     <style>
         body {
@@ -462,11 +467,8 @@
     </div>
 
     <script>
-        // Initialize EmailJS
-        (function() {
-            emailjs.init("7cimGrBdIHCn4gSDy");
-        })();
-
+        // Initialize EmailJS is in the Head
+   
         // Initialize Stripe (you'll need to replace with your actual key)
         const stripe = Stripe('YOUR_STRIPE_PUBLISHABLE_KEY');
 
