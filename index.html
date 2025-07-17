@@ -990,27 +990,32 @@ function updatePasswordFromReset(token) {
             }
         }
 
-        function loadSettings() {
-            document.getElementById('newEmail').value = currentUser.email;
-
-            document.getElementById('creditUserPayment').classList.add('hidden');
-            document.getElementById('studentUserPayment').classList.add('hidden');
-            document.getElementById('adminUserPayment').classList.add('hidden');
-
-            if (currentUser.userType === 'credits') {
-                document.getElementById('creditUserPayment').classList.remove('hidden');
-                document.getElementById('currentCredits').textContent = currentUser.credits;
-            } else if (currentUser.userType === 'student') {
-                document.getElementById('studentUserPayment').classList.remove('hidden');
-                const daysLeft = calculateDaysRemaining(currentUser.accessExpiry);
-                document.getElementById('studentDaysLeft').textContent = daysLeft;
-            } else if (currentUser.userType === 'admin') {
-                document.getElementById('adminUserPayment').classList.remove('hidden');
-                document.getElementById('adminSettings').classList.remove('hidden');
-                updateAdminSection();
-            }
-        }
-
+      function loadSettings() {
+    document.getElementById('newEmail').value = currentUser.email;
+    
+    // Hide all payment sections first
+    document.getElementById('creditUserPayment').classList.add('hidden');
+    document.getElementById('studentUserPayment').classList.add('hidden');
+    document.getElementById('adminUserPayment').classList.add('hidden');
+    document.getElementById('adminSettings').classList.add('hidden'); // Always hide admin settings first
+    
+    if (currentUser.userType === 'credits') {
+        document.getElementById('creditUserPayment').classList.remove('hidden');
+        document.getElementById('currentCredits').textContent = currentUser.credits;
+    } else if (currentUser.userType === 'student') {
+        document.getElementById('studentUserPayment').classList.remove('hidden');
+        const daysLeft = calculateDaysRemaining(currentUser.accessExpiry);
+        document.getElementById('studentDaysLeft').textContent = daysLeft;
+    }
+    
+    // Show admin sections ONLY if user is actually an admin
+    if (currentUser.isAdmin === true) {
+        document.getElementById('adminUserPayment').classList.remove('hidden');
+        document.getElementById('adminSettings').classList.remove('hidden');
+        updateAdminSection();
+    }
+}
+        
         function updateAdminSection() {
             document.getElementById('totalUsers').textContent = mockDB.users.filter(function(u) { return !u.isAdmin; }).length;
             document.getElementById('totalEvaluations').textContent = mockDB.submissions.length;
