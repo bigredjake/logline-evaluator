@@ -943,12 +943,17 @@ function updatePasswordFromReset(token) {
             }
         }
 
-        function showApp() {
-            document.getElementById('authSection').classList.add('hidden');
-            document.getElementById('appSection').classList.remove('hidden');
-            showSection('logline');
-            updateUI();
-        }
+      function showApp() {
+    document.getElementById('authSection').classList.add('hidden');
+    document.getElementById('appSection').classList.remove('hidden');
+    
+    // Force reset all admin sections when switching users
+    document.getElementById('adminSettings').classList.add('hidden');
+    document.getElementById('adminUserPayment').classList.add('hidden');
+    
+    showSection('logline');
+    updateUI();
+}
 
         function showSection(section) {
             document.getElementById('loglineSection').classList.add('hidden');
@@ -1238,23 +1243,28 @@ function updatePasswordFromReset(token) {
         }
 
         function logout() {
-            localStorage.removeItem('brs_user');
-            currentUser = null;
-            currentView = 'login';
-            currentEvaluation = null;
-            
-            document.getElementById('appSection').classList.add('hidden');
-            document.getElementById('authSection').classList.remove('hidden');
-            
-            document.getElementById('authEmail').value = '';
-            document.getElementById('authPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
-            document.getElementById('studentCode').value = '';
-            
-            if (currentView !== 'login') {
-                toggleAuthMode();
-            }
-        }
+    // Clear all admin sections before logging out
+    document.getElementById('adminSettings').classList.add('hidden');
+    document.getElementById('adminUserPayment').classList.add('hidden');
+    
+    localStorage.removeItem('brs_user');
+    currentUser = null;
+    currentView = 'login';
+    currentEvaluation = null;
+    
+    document.getElementById('appSection').classList.add('hidden');
+    document.getElementById('authSection').classList.remove('hidden');
+    
+    document.getElementById('authEmail').value = '';
+    document.getElementById('authPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+    document.getElementById('studentCode').value = '';
+    
+    if (currentView !== 'login') {
+        toggleAuthMode();
+    }
+}
+        
     </script>
 </body>
 </html>
