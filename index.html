@@ -1,893 +1,4 @@
-// Utility Functions
-        function hashPassword(password) {
-            // Simple hash for demo - in real app, use proper bcrypt
-            return btoa(password + 'salt123');
-        }
-
-        function checkPasswordStrength(password) {
-            let strength = 0;
-            const requirements = {
-                length: password.length >= 8,
-                uppercase: /[A-Z]/.test(password),
-                lowercase: /[a-z]/.test(password),
-                number: /\d/.test(password),
-                special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-            };
-
-            strength = Object.values(requirements).filter(Boolean).length;
-            
-            if (strength < 3) return 'weak';
-            if (strength < 5) return 'medium';
-            return 'strong';
-        }
-
-        function updatePasswordStrength(passwordField, strengthElement) {
-            const password = passwordField.value;
-            const strength = checkPasswordStrength(password);
-            
-            strengthElement.className = `password-strength password-${strength}`;
-            strengthElement.classList.remove('hidden');
-        }
-
-        function validatePassword(password) {
-            const requirements = {
-                length: password.length >= 8,
-                uppercase: /[A-Z]/.test(password),
-                lowercase: /[a-z]/.test(password),
-                number: /\d/.test(password),
-                special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-            };
-
-            return Object.values(requirements).every(Boolean);
-        }
-
-        function calculateDaysRemaining(expiryDate) {
-            const now = new Date();
-            const expiry = new Date(expiryDate);
-            const diffTime = expiry - now;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return Math.max(0, diffDays);
-        }
-
-        function truncateLogline(logline, maxLength = 50) {
-            if (logline.length <= maxLength) return logline;
-            return logline.substring(0, maxLength) + '...';
-        }
-
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-        }
-
-        // Initialize app
-        document.addEventListener('DOMContentLoaded', function() {
-            // Load saved data
-            const savedUser = localStorage.getItem('brs_user');
-            const savedDB = localStorage.getItem('brs_db');
-            
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                showApp();
-            }
-            
-            if (savedDB) {
-                mockDB = JSON.parse(savedDB);
-            } else {
-                localStorage.setItem('brs_db', JSON.stringify(mockDB));
-            }
-
-            setupEventListeners();
-            updateUI();
-        });
-
-        function setupEventListeners() {
-            // Auth listeners
-            document.getElementById('authToggle').addEventListener('click', toggleAuthMode);
-            document.getElementById('authSubmit').addEventListener('click', handleAuth);
-            document.getElementById('togglePassword').addEventListener('click', togglePasswordVisibility);
-            document.getElementById('forgotPasswordBtn').addEventListener('click', showPasswordReset);
-            document.getElementById('sendResetBtn').addEventListener('click', sendPasswordReset);
-            document.getElementById('cancelResetBtn').addEventListener('click', hidePasswordReset);
-            
-            // Navigation listeners
-            document.getElementById('logoutBtn').addEventListener('click', logout);
-            document.getElementById('loglineBtn').addEventListener('click', () => showSection('logline'));
-            document.getElementById('historyBtn').addEventListener('click', () => showSection('history'));
-            document.getElementById('settingsBtn').addEventListener('click', () => showSection('settings'));
-            
-            // App listeners
-            document.getElementById('evaluateBtn').addEventListener('click', evaluateLogline);
-            document.getElementById('resetBtn').addEventListener('click', resetForm);
-            document.getElementById('downloadPdfBtn').addEventListener('click', downloadEvaluationPDF);
-            
-            // History listeners
-            document.getElementById('showAllHistoryBtn').addEventListener('click', toggleShowAllHistory);
-            
-            // Settings listeners
-            document.getElementById('updateEmailBtn').addEventListener('click', updateEmail);
-            document.getElementById('updatePasswordBtn').addEventListener('click', updatePassword);
-            document.getElementById('managePaymentBtn').addEventListener('click', managePayment);
-            document.getElementById('buyMoreCreditsBtn').addEventListener('click', () => showSection('purchase'));
-            
-            // Admin listeners
-            document.getElementById('generateCodesBtn').addEventListener('click', generateStudentCodes);
-            document.getElementById('downloadCodesBtn').addEventListener('click', downloadCodes);
-            document.getElementById('downloadAllSubmissionsBtn').addEventListener('click', downloadAllSubmissions);
-
-            // Password strength listeners
-            document.getElementById('authPassword').addEventListener('input', function() {
-                if (currentView === 'register') {
-                    updatePasswordStrength(this, document.getElementById('passwordStrength'));
-                }
-            });
-
-            document.getElementById('newPassword').addEventListener('input', function() {
-                updatePasswordStrength(this, document.getElementById('newPasswordStrength'));
-            });
-        }
-
-        function saveToStorage() {
-            localStorage.setItem('brs_user', JSON.stringify(currentUser));
-            localStorage.setItem('brs_db', JSON.stringify(mockDB));
-        }
-
-        // Authentication Functions
-        function toggleAuthMode() {
-            currentView = currentView === 'login' ? 'register' : 'login';
-            const registerFields = document.getElementById('registerFields');
-            const subtitle = document.getElementById('authSubtitle');
-            const buttonText = document.getElementById('authButtonText');
-            const toggleText = document.getElementById('authToggle');
-            const passwordRequirements = document.getElementById('passwordRequirements');
-
-            if (currentView === 'register') {
-                registerFields.classList.remove('hidden');
-                passwordRequirements.classList.remove('hidden');
-                subtitle.textContent = 'Create your account';
-                buttonText.textContent = 'Create Account';
-                toggleText.textContent = 'Already have an account? Sign in';
-            } else {
-                registerFields.classList.add('hidden');
-                passwordRequirements.classList.add('hidden');
-                subtitle.textContent = 'Sign in to your account';
-                buttonText.textContent = 'Sign In';
-                toggleText.textContent = "Don't have an account? Sign up";
-            }
-        }
-
-        function togglePasswordVisibility() {
-            const passwordField = document.getElementById('authPassword');
-            const eyeIcon = document.getElementById('eyeIcon');
-            
-            if (passwordField.type === 'password') {
-                passwordField.type = 'text';
-                eyeIcon.textContent = '🙈';
-            } else {
-                passwordField.type = 'password';
-                eyeIcon.textContent = '👁️';
-            }
-        }
-
-        function showPasswordReset() {
-            document.getElementById('resetModal').classList.remove('hidden');
-        }
-
-        function hidePasswordReset() {
-            document.getElementById('resetModal').classList.add('hidden');
-            document.getElementById('resetEmail').value = '';
-        }
-
-        async function sendPasswordReset() {
-            const email = document.getElementById('resetEmail').value;
-            if (!email) {
-                alert('Please enter your email address');
-                return;
-            }
-
-            const user = mockDB.users.find(u => u.email === email);
-            if (!user) {
-                alert('No account found with that email address');
-                return;
-            }
-
-            // Generate reset token (in real app, this would be more secure)
-            const resetToken = Math.random().toString(36).substr(2, 15);
-            
-            try {
-                // Send email via EmailJS (you'll need to configure this)
-               await emailjs.send('service_z3nppt7', 'template_40v3r7i', {
-                    to_email: email,
-                    reset_link: `${window.location.origin}?reset=${resetToken}`,
-                    user_name: email
-                });
-
-                alert('Password reset link sent to your email!');
-                hidePasswordReset();
-            } catch (error) {
-                console.error('Email sending failed:', error);
-                alert('Failed to send reset email. Please try again.');
-            }
-        }
-
-        async function handleAuth() {
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
-
-            if (!email || !password) {
-                alert('Please fill in all required fields');
-                return;
-            }
-
-            if (currentView === 'register') {
-                const confirmPassword = document.getElementById('confirmPassword').value;
-                const studentCode = document.getElementById('studentCode').value;
-
-                if (password !== confirmPassword) {
-                    alert('Passwords do not match');
-                    return;
-                }
-
-                if (!validatePassword(password)) {
-                    alert('Password does not meet requirements');
-                    return;
-                }
-
-                if (mockDB.users.find(u => u.email === email)) {
-                    alert('Email already exists');
-                    return;
-                }
-
-                await register(email, password, studentCode);
-            } else {
-                await login(email, password);
-            }
-        }
-
-        async function login(email, password) {
-            setLoading(true);
-            
-            const hashedPassword = hashPassword(password);
-            const user = mockDB.users.find(u => u.email === email && u.password === hashedPassword);
-            
-            if (user) {
-                currentUser = user;
-                saveToStorage();
-                showApp();
-            } else {
-                alert('Invalid email or password');
-            }
-            
-            setLoading(false);
-        }
-
-        async function register(email, password, studentCode) {
-            setLoading(true);
-            
-            let userType = 'credits';
-            let credits = 0;
-            let accessExpiry = null;
-
-            // Check student code
-            if (studentCode) {
-                const code = mockDB.studentCodes.find(c => c.code === studentCode && !c.used);
-                if (code) {
-                    userType = 'student';
-                    const expiry = new Date();
-                    expiry.setMonth(expiry.getMonth() + code.months);
-                    accessExpiry = expiry.toISOString();
-
-                    // Mark code as used
-                    code.used = true;
-                    code.usedBy = email;
-                    code.usedAt = new Date().toISOString();
-                } else {
-                    alert('Invalid or already used student code');
-                    setLoading(false);
-                    return;
-                }
-            }
-
-            const newUser = {
-                id: Date.now().toString(),
-                email,
-                password: hashPassword(password),
-                userType,
-                credits,
-                accessExpiry,
-                createdAt: new Date().toISOString(),
-                isAdmin: email === 'jacob@bigredstripe.com'
-            };
-
-            mockDB.users.push(newUser);
-            currentUser = newUser;
-            saveToStorage();
-            showApp();
-            setLoading(false);
-        }
-
-        function setLoading(loading) {
-            isLoading = loading;
-            const button = document.getElementById('authSubmit');
-            const spinner = document.getElementById('authSpinner');
-            
-            button.disabled = loading;
-            if (loading) {
-                spinner.classList.remove('hidden');
-            } else {
-                spinner.classList.add('hidden');
-            }
-        }
-
-        function showApp() {
-            document.getElementById('authSection').classList.add('hidden');
-            document.getElementById('appSection').classList.remove('hidden');
-            showSection('logline');
-            updateUI();
-        }
-
-        function showSection(section) {
-            // Hide all sections
-            document.getElementById('loglineSection').classList.add('hidden');
-            document.getElementById('resultsSection').classList.add('hidden');
-            document.getElementById('historySection').classList.add('hidden');
-            document.getElementById('settingsSection').classList.add('hidden');
-            document.getElementById('purchaseSection').classList.add('hidden');
-
-            // Show requested section
-            if (section === 'logline') {
-                document.getElementById('loglineSection').classList.remove('hidden');
-            } else if (section === 'history') {
-                document.getElementById('historySection').classList.remove('hidden');
-                loadHistory();
-            } else if (section === 'settings') {
-                document.getElementById('settingsSection').classList.remove('hidden');
-                loadSettings();
-            } else if (section === 'purchase') {
-                document.getElementById('purchaseSection').classList.remove('hidden');
-                updatePurchaseSection();
-            } else if (section === 'results') {
-                document.getElementById('resultsSection').classList.remove('hidden');
-            }
-        }
-
-        function updateUI() {
-            if (!currentUser) return;
-
-            // Update status display
-            const userStatus = document.getElementById('userStatus');
-            if (currentUser.userType === 'credits') {
-                userStatus.textContent = `${currentUser.credits} credits remaining`;
-                userStatus.className = 'text-sm font-medium text-blue-600';
-            } else if (currentUser.userType === 'student') {
-                const daysLeft = calculateDaysRemaining(currentUser.accessExpiry);
-                userStatus.textContent = `${daysLeft} days remaining`;
-                userStatus.className = 'text-sm font-medium text-green-600';
-            } else if (currentUser.userType === 'admin') {
-                userStatus.textContent = 'Unlimited access';
-                userStatus.className = 'text-sm font-medium text-purple-600';
-            }
-        }
-
-        function loadSettings() {
-            // Load current email
-            document.getElementById('newEmail').value = currentUser.email;
-
-            // Show appropriate payment section
-            document.getElementById('creditUserPayment').classList.add('hidden');
-            document.getElementById('studentUserPayment').classList.add('hidden');
-            document.getElementById('adminUserPayment').classList.add('hidden');
-
-            if (currentUser.userType === 'credits') {
-                document.getElementById('creditUserPayment').classList.remove('hidden');
-                document.getElementById('currentCredits').textContent = currentUser.credits;
-            } else if (currentUser.userType === 'student') {
-                document.getElementById('studentUserPayment').classList.remove('hidden');
-                const daysLeft = calculateDaysRemaining(currentUser.accessExpiry);
-                document.getElementById('studentDaysLeft').textContent = daysLeft;
-            } else if (currentUser.userType === 'admin') {
-                document.getElementById('adminUserPayment').classList.remove('hidden');
-                document.getElementById('adminSettings').classList.remove('hidden');
-                updateAdminSection();
-            }
-        }
-
-        function updateAdminSection() {
-            document.getElementById('totalUsers').textContent = mockDB.users.filter(u => !u.isAdmin).length;
-            document.getElementById('totalEvaluations').textContent = mockDB.submissions.length;
-            document.getElementById('codesCount').textContent = mockDB.studentCodes.length;
-            document.getElementById('submissionsCount').textContent = mockDB.submissions.length;
-        }
-
-        // Core App Functions
-        async function evaluateLogline() {
-            const formData = {
-                genre: document.getElementById('genre').value,
-                tone: document.getElementById('tone').value,
-                mainCharacter: document.getElementById('mainCharacter').value,
-                antagonist: document.getElementById('antagonist').value,
-                incitingIncident: document.getElementById('incitingIncident').value,
-                storyDetails: document.getElementById('storyDetails').value,
-                logline: document.getElementById('logline').value
-            };
-
-            // Validate all fields
-            if (!formData.genre || !formData.tone || !formData.mainCharacter || !formData.antagonist || !formData.incitingIncident || !formData.storyDetails || !formData.logline) {
-                alert('Please fill in all fields before submitting.');
-                return;
-            }
-
-            // Check user access
-            if (currentUser.userType === 'credits' && currentUser.credits <= 0) {
-                alert('You have no credits remaining. Please purchase more credits to continue.');
-                showSection('purchase');
-                return;
-            }
-
-            if (currentUser.userType === 'student' && new Date(currentUser.accessExpiry) < new Date()) {
-                alert('Your student access has expired. Please purchase credits to continue.');
-                showSection('purchase');
-                return;
-            }
-
-            // Show loading state
-            const button = document.getElementById('evaluateBtn');
-            const text = document.getElementById('evaluateText');
-            const spinner = document.getElementById('evaluateSpinner');
-            
-            button.disabled = true;
-            text.textContent = 'Evaluating Your Logline...';
-            spinner.classList.remove('hidden');
-
-            try {
-                // Call backend function
-                const response = await fetch('/.netlify/functions/evaluate-logline', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ formData })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`Backend error: ${response.status} - ${errorData.error}`);
-                }
-
-                const data = await response.json();
-                const claudeResponse = data.evaluation;
-
-                // Update user credits
-                if (currentUser.userType === 'credits') {
-                    currentUser.credits -= 1;
-                    
-                    // Check for low credit alerts
-                    if (currentUser.credits === 10 || currentUser.credits === 5) {
-                        setTimeout(() => alert(`You have ${currentUser.credits} credits remaining. Consider purchasing more!`), 2000);
-                    } else if (currentUser.credits === 0) {
-                        setTimeout(() => alert('You\'re out of credits! Purchase more to continue using the evaluator.'), 2000);
-                    }
-                }
-
-                // Save submission
-                const submission = {
-                    id: Date.now().toString(),
-                    timestamp: new Date().toISOString(),
-                    userId: currentUser.id,
-                    userEmail: currentUser.email,
-                    formData,
-                    claudeResponse
-                };
-
-                mockDB.submissions.push(submission);
-                currentEvaluation = submission;
-                
-                // Update user in database
-                const userIndex = mockDB.users.findIndex(u => u.id === currentUser.id);
-                if (userIndex !== -1) {
-                    mockDB.users[userIndex] = currentUser;
-                }
-
-                saveToStorage();
-
-                // Show results
-                document.getElementById('originalLogline').textContent = `"${formData.logline}"`;
-                document.getElementById('evaluationResult').textContent = claudeResponse;
-                
-                showSection('results');
-                updateUI();
-
-            } catch (error) {
-                console.error('Error evaluating logline:', error);
-                alert('Sorry, there was an error evaluating your logline. Please try again.');
-            } finally {
-                // Reset button state
-                button.disabled = false;
-                text.textContent = 'Get My Evaluation';
-                spinner.classList.add('hidden');
-            }
-        }
-
-        function resetForm() {
-            // Clear form
-            document.getElementById('genre').value = '';
-            document.getElementById('tone').value = '';
-            document.getElementById('mainCharacter').value = '';
-            document.getElementById('antagonist').value = '';
-            document.getElementById('incitingIncident').value = '';
-            document.getElementById('storyDetails').value = '';
-            document.getElementById('logline').value = '';
-            
-            showSection('logline');
-        }
-
-        // History Functions
-        function loadHistory() {
-            const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id);
-            
-            if (userSubmissions.length === 0) {
-                document.getElementById('noHistory').classList.remove('hidden');
-                document.getElementById('historyList').classList.add('hidden');
-                document.getElementById('historyPagination').classList.add('hidden');
-                return;
-            }
-
-            document.getElementById('noHistory').classList.add('hidden');
-            document.getElementById('historyList').classList.remove('hidden');
-
-            // Sort by timestamp (newest first)
-            userSubmissions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-            displayHistory(userSubmissions);
-        }
-
-        function displayHistory(submissions) {
-            const historyList = document.getElementById('historyList');
-            const pagination = document.getElementById('historyPagination');
-
-            // Clear existing content
-            historyList.innerHTML = '';
-            pagination.innerHTML = '';
-
-            let itemsToShow = submissions;
-            if (!showAllHistory) {
-                const startIndex = (currentHistoryPage - 1) * historyPerPage;
-                const endIndex = startIndex + historyPerPage;
-                itemsToShow = submissions.slice(startIndex, endIndex);
-            }
-
-            // Display items
-            itemsToShow.forEach(submission => {
-                const item = document.createElement('div');
-                item.className = 'history-item border border-gray-200 rounded-lg p-4';
-                item.onclick = () => viewEvaluation(submission);
-
-                item.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <p class="font-medium text-gray-900">${truncateLogline(submission.formData.logline)}</p>
-                            <p class="text-sm text-gray-500">${formatDate(submission.timestamp)}</p>
-                        </div>
-                        <button onclick="event.stopPropagation(); downloadSingleEvaluationPDF('${submission.id}')" 
-                                class="ml-4 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-                            PDF
-                        </button>
-                    </div>
-                `;
-
-                historyList.appendChild(item);
-            });
-
-            // Update pagination
-            if (!showAllHistory && submissions.length > historyPerPage) {
-                const totalPages = Math.ceil(submissions.length / historyPerPage);
-                
-                for (let i = 1; i <= totalPages; i++) {
-                    const button = document.createElement('button');
-                    button.textContent = i;
-                    button.className = `px-3 py-1 rounded ${i === currentHistoryPage ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`;
-                    button.onclick = () => changePage(i);
-                    pagination.appendChild(button);
-                }
-            }
-
-            // Update "Show All" button
-            const showAllBtn = document.getElementById('showAllHistoryBtn');
-            showAllBtn.textContent = showAllHistory ? 'Show Pages' : 'Show All';
-        }
-
-        function changePage(page) {
-            currentHistoryPage = page;
-            loadHistory();
-        }
-
-        function toggleShowAllHistory() {
-            showAllHistory = !showAllHistory;
-            currentHistoryPage = 1;
-            loadHistory();
-        }
-
-        function viewEvaluation(submission) {
-            currentEvaluation = submission;
-            document.getElementById('originalLogline').textContent = `"${submission.formData.logline}"`;
-            document.getElementById('evaluationResult').textContent = submission.claudeResponse;
-            showSection('results');
-        }
-
-        // PDF Generation
-        function downloadEvaluationPDF() {
-            if (!currentEvaluation) return;
-            generateEvaluationPDF(currentEvaluation);
-        }
-
-        function downloadSingleEvaluationPDF(submissionId) {
-            const submission = mockDB.submissions.find(s => s.id === submissionId);
-            if (submission) {
-                generateEvaluationPDF(submission);
-            }
-        }
-
-        function generateEvaluationPDF(submission) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            // Add BRS Labs logo (placeholder - you'd need to convert your logo to base64)
-            doc.setFontSize(20);
-            doc.setTextColor(217, 4, 43); // BRS red color
-            doc.text('BRS LABS', 20, 30);
-
-            doc.setFontSize(16);
-            doc.setTextColor(0, 0, 0);
-            doc.text('Logline Evaluation Report', 20, 50);
-
-            // Add date
-            doc.setFontSize(10);
-            doc.text(`Generated: ${formatDate(submission.timestamp)}`, 20, 60);
-
-            // Add original logline
-            doc.setFontSize(12);
-            doc.text('Your Original Logline:', 20, 80);
-            doc.setFontSize(11);
-            const loglineLines = doc.splitTextToSize(`"${submission.formData.logline}"`, 170);
-            doc.text(loglineLines, 20, 90);
-
-            // Add evaluation (truncated for demo)
-            let yPosition = 110;
-            doc.setFontSize(12);
-            doc.text('Evaluation:', 20, yPosition);
-            yPosition += 10;
-
-            doc.setFontSize(10);
-            const evaluationLines = doc.splitTextToSize(submission.claudeResponse.substring(0, 1500) + '...', 170);
-            doc.text(evaluationLines, 20, yPosition);
-
-            // Add Crucible link at bottom
-            yPosition = 250;
-            doc.setFontSize(10);
-            doc.text('Want to learn how to write Hollywood-quality screenplays?', 20, yPosition);
-            doc.setTextColor(217, 4, 43);
-            doc.textWithLink('Click here for my screenwriting course', 20, yPosition + 10, {
-                url: 'https://sales.bigredstripe.com/crucible/?video=LoglineEvaluatorLink'
-            });
-
-            // Save PDF
-            doc.save(`logline-evaluation-${formatDate(submission.timestamp)}.pdf`);
-        }
-
-        // Settings Functions
-        function updateEmail() {
-            const newEmail = document.getElementById('newEmail').value;
-            if (!newEmail || newEmail === currentUser.email) return;
-
-            if (mockDB.users.find(u => u.email === newEmail && u.id !== currentUser.id)) {
-                alert('Email already exists');
-                return;
-            }
-
-            currentUser.email = newEmail;
-            const userIndex = mockDB.users.findIndex(u => u.id === currentUser.id);
-            if (userIndex !== -1) {
-                mockDB.users[userIndex] = currentUser;
-            }
-            saveToStorage();
-            alert('Email updated successfully!');
-        }
-
-        function updatePassword() {
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmNewPassword = document.getElementById('confirmNewPassword').value;
-
-            if (!currentPassword || !newPassword || !confirmNewPassword) {
-                alert('Please fill in all password fields');
-                return;
-            }
-
-            if (hashPassword(currentPassword) !== currentUser.password) {
-                alert('Current password is incorrect');
-                return;
-            }
-
-            if (newPassword !== confirmNewPassword) {
-                alert('New passwords do not match');
-                return;
-            }
-
-            if (!validatePassword(newPassword)) {
-                alert('New password does not meet requirements');
-                return;
-            }
-
-            currentUser.password = hashPassword(newPassword);
-            const userIndex = mockDB.users.findIndex(u => u.id === currentUser.id);
-            if (userIndex !== -1) {
-                mockDB.users[userIndex] = currentUser;
-            }
-            saveToStorage();
-
-            // Clear password fields
-            document.getElementById('currentPassword').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmNewPassword').value = '';
-
-            alert('Password updated successfully!');
-        }
-
-        function managePayment() {
-            // In real app, this would open Stripe customer portal
-            alert('Payment management integration would go here (Stripe Customer Portal)');
-        }
-
-        // Admin Functions
-        function generateStudentCodes() {
-            const quantity = parseInt(document.getElementById('codeQuantity').value) || 1;
-            const months = parseInt(document.getElementById('codeMonths').value) || 3;
-
-            const newCodes = [];
-            for (let i = 0; i < quantity; i++) {
-                const code = 'STUDENT-' + Math.random().toString(36).substr(2, 6).toUpperCase();
-                newCodes.push({
-                    id: Date.now().toString() + i,
-                    code,
-                    months,
-                    createdAt: new Date().toISOString(),
-                    used: false
-                });
-            }
-
-            mockDB.studentCodes.push(...newCodes);
-            saveToStorage();
-            updateAdminSection();
-            
-            alert(`Generated ${quantity} codes for ${months} months each!\n\nCodes: ${newCodes.map(c => c.code).join(', ')}`);
-        }
-
-        function downloadCodes() {
-            if (mockDB.studentCodes.length === 0) {
-                alert('No codes to download yet.');
-                return;
-            }
-
-            const csvContent = mockDB.studentCodes.map(code => {
-                return [
-                    code.code,
-                    code.months,
-                    code.createdAt,
-                    code.used ? 'Yes' : 'No',
-                    code.usedBy || '',
-                    code.usedAt || ''
-                ].join(',');
-            });
-
-            const header = 'Code,Months,Created,Used,Used By,Used At';
-            const csv = [header, ...csvContent].join('\n');
-
-            downloadCSV(csv, `student-codes-${new Date().toISOString().split('T')[0]}.csv`);
-        }
-
-        function downloadAllSubmissions() {
-            if (mockDB.submissions.length === 0) {
-                alert('No submissions to download yet.');
-                return;
-            }
-
-            const csvContent = mockDB.submissions.map(sub => {
-                return [
-                    sub.timestamp,
-                    sub.userEmail,
-                    `"${sub.formData.genre}"`,
-                    `"${sub.formData.tone}"`,
-                    `"${sub.formData.mainCharacter.replace(/"/g, '""')}"`,
-                    `"${sub.formData.antagonist.replace(/"/g, '""')}"`,
-                    `"${sub.formData.incitingIncident.replace(/"/g, '""')}"`,
-                    `"${sub.formData.storyDetails.replace(/"/g, '""')}"`,
-                    `"${sub.formData.logline.replace(/"/g, '""')}"`,
-                    `"${sub.claudeResponse.replace(/"/g, '""')}"`
-                ].join(',');
-            });
-
-            const header = 'Timestamp,User Email,Genre,Tone,Protagonist,Antagonist,Inciting Incident,Story Details,Original Logline,Claude Response';
-            const csv = [header, ...csvContent].join('\n');
-
-            downloadCSV(csv, `all-submissions-${new Date().toISOString().split('T')[0]}.csv`);
-        }
-
-        function downloadCSV(csvContent, filename) {
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            window.URL.revokeObjectURL(url);
-        }
-
-        // Purchase Functions
-        function updatePurchaseSection() {
-            const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id).length;
-            const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
-            
-            if (isBeta) {
-                document.getElementById('betaDiscount').classList.remove('hidden');
-                document.getElementById('price25').textContent = '$15';
-                document.getElementById('price50').textContent = '$28';
-                document.getElementById('price100').textContent = '$50';
-            } else {
-                document.getElementById('betaDiscount').classList.add('hidden');
-                document.getElementById('price25').textContent = '$30';
-                document.getElementById('price50').textContent = '$55';
-                document.getElementById('price100').textContent = '$100';
-            }
-        }
-
-        function purchaseCredits(amount) {
-    const prices = { 25: 30, 50: 55, 100: 100 };
-    const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id).length;
-    const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
-    const finalPrice = isBeta ? prices[amount] / 2 : prices[amount];
-
-    const discountText = isBeta ? ' (50% Beta Tester Discount!)' : '';
-    if (confirm('Purchase ' + amount + ' credits for $' + finalPrice + '?' + discountText)) {
-        currentUser.credits += amount;
-        
-        const userIndex = mockDB.users.findIndex(u => u.id === currentUser.id);
-        if (userIndex !== -1) {
-            mockDB.users[userIndex] = currentUser;
-        }
-        
-        saveToStorage();
-        updateUI();
-        updatePurchaseSection();
-        alert('Successfully purchased ' + amount + ' credits!');
-    }
-}
-
-        function logout() {
-            localStorage.removeItem('brs_user');
-            currentUser = null;
-            currentView = 'login';
-            currentEvaluation = null;
-            
-            document.getElementById('appSection').classList.add('hidden');
-            document.getElementById('authSection').classList.remove('hidden');
-            
-            // Reset auth form
-            document.getElementById('authEmail').value = '';
-            document.getElementById('authPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
-            document.getElementById('studentCode').value = '';
-            
-            // Reset to login mode
-            if (currentView !== 'login') {
-                toggleAuthMode();
-            }
-        }
-    </script>
-</body>
-</html><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1351,7 +462,7 @@
     </div>
 
     <script>
-        // Initialize EmailJS (you'll need to replace with your actual keys)
+        // Initialize EmailJS
         emailjs.init("7cimGrBdIHCn4gSDy");
 
         // Initialize Stripe (you'll need to replace with your actual key)
@@ -1366,7 +477,7 @@
         let showAllHistory = false;
         let currentEvaluation = null;
         
-        // Mock database (in real app, this would be backend API calls)
+        // Mock database
         let mockDB = {
             users: [{
                 id: 'admin-001',
@@ -1384,5 +495,633 @@
 
         // Utility Functions
         function hashPassword(password) {
-            // Simple hash for demo - in real app, use proper bcrypt
-            return bt
+            return btoa(password + 'salt123');
+        }
+
+        function checkPasswordStrength(password) {
+            let strength = 0;
+            const requirements = {
+                length: password.length >= 8,
+                uppercase: /[A-Z]/.test(password),
+                lowercase: /[a-z]/.test(password),
+                number: /\d/.test(password),
+                special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+            };
+
+            strength = Object.values(requirements).filter(Boolean).length;
+            
+            if (strength < 3) return 'weak';
+            if (strength < 5) return 'medium';
+            return 'strong';
+        }
+
+        function updatePasswordStrength(passwordField, strengthElement) {
+            const password = passwordField.value;
+            const strength = checkPasswordStrength(password);
+            
+            strengthElement.className = 'password-strength password-' + strength;
+            strengthElement.classList.remove('hidden');
+        }
+
+        function validatePassword(password) {
+            const requirements = {
+                length: password.length >= 8,
+                uppercase: /[A-Z]/.test(password),
+                lowercase: /[a-z]/.test(password),
+                number: /\d/.test(password),
+                special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+            };
+
+            return Object.values(requirements).every(Boolean);
+        }
+
+        function calculateDaysRemaining(expiryDate) {
+            const now = new Date();
+            const expiry = new Date(expiryDate);
+            const diffTime = expiry - now;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return Math.max(0, diffDays);
+        }
+
+        function truncateLogline(logline, maxLength) {
+            maxLength = maxLength || 50;
+            if (logline.length <= maxLength) return logline;
+            return logline.substring(0, maxLength) + '...';
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedUser = localStorage.getItem('brs_user');
+            const savedDB = localStorage.getItem('brs_db');
+            
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showApp();
+            }
+            
+            if (savedDB) {
+                mockDB = JSON.parse(savedDB);
+            } else {
+                localStorage.setItem('brs_db', JSON.stringify(mockDB));
+            }
+
+            setupEventListeners();
+            updateUI();
+        });
+
+        function setupEventListeners() {
+            // Auth listeners
+            document.getElementById('authToggle').addEventListener('click', toggleAuthMode);
+            document.getElementById('authSubmit').addEventListener('click', handleAuth);
+            document.getElementById('togglePassword').addEventListener('click', togglePasswordVisibility);
+            document.getElementById('forgotPasswordBtn').addEventListener('click', showPasswordReset);
+            document.getElementById('sendResetBtn').addEventListener('click', sendPasswordReset);
+            document.getElementById('cancelResetBtn').addEventListener('click', hidePasswordReset);
+            
+            // Navigation listeners
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+            document.getElementById('loglineBtn').addEventListener('click', function() { showSection('logline'); });
+            document.getElementById('historyBtn').addEventListener('click', function() { showSection('history'); });
+            document.getElementById('settingsBtn').addEventListener('click', function() { showSection('settings'); });
+            
+            // App listeners
+            document.getElementById('evaluateBtn').addEventListener('click', evaluateLogline);
+            document.getElementById('resetBtn').addEventListener('click', resetForm);
+            document.getElementById('downloadPdfBtn').addEventListener('click', downloadEvaluationPDF);
+            
+            // History listeners
+            document.getElementById('showAllHistoryBtn').addEventListener('click', toggleShowAllHistory);
+            
+            // Settings listeners
+            document.getElementById('updateEmailBtn').addEventListener('click', updateEmail);
+            document.getElementById('updatePasswordBtn').addEventListener('click', updatePassword);
+            document.getElementById('managePaymentBtn').addEventListener('click', managePayment);
+            document.getElementById('buyMoreCreditsBtn').addEventListener('click', function() { showSection('purchase'); });
+            
+            // Admin listeners
+            document.getElementById('generateCodesBtn').addEventListener('click', generateStudentCodes);
+            document.getElementById('downloadCodesBtn').addEventListener('click', downloadCodes);
+            document.getElementById('downloadAllSubmissionsBtn').addEventListener('click', downloadAllSubmissions);
+
+            // Password strength listeners
+            document.getElementById('authPassword').addEventListener('input', function() {
+                if (currentView === 'register') {
+                    updatePasswordStrength(this, document.getElementById('passwordStrength'));
+                }
+            });
+
+            document.getElementById('newPassword').addEventListener('input', function() {
+                updatePasswordStrength(this, document.getElementById('newPasswordStrength'));
+            });
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('brs_user', JSON.stringify(currentUser));
+            localStorage.setItem('brs_db', JSON.stringify(mockDB));
+        }
+
+        // Authentication Functions
+        function toggleAuthMode() {
+            currentView = currentView === 'login' ? 'register' : 'login';
+            const registerFields = document.getElementById('registerFields');
+            const subtitle = document.getElementById('authSubtitle');
+            const buttonText = document.getElementById('authButtonText');
+            const toggleText = document.getElementById('authToggle');
+            const passwordRequirements = document.getElementById('passwordRequirements');
+
+            if (currentView === 'register') {
+                registerFields.classList.remove('hidden');
+                passwordRequirements.classList.remove('hidden');
+                subtitle.textContent = 'Create your account';
+                buttonText.textContent = 'Create Account';
+                toggleText.textContent = 'Already have an account? Sign in';
+            } else {
+                registerFields.classList.add('hidden');
+                passwordRequirements.classList.add('hidden');
+                subtitle.textContent = 'Sign in to your account';
+                buttonText.textContent = 'Sign In';
+                toggleText.textContent = "Don't have an account? Sign up";
+            }
+        }
+
+        function togglePasswordVisibility() {
+            const passwordField = document.getElementById('authPassword');
+            const eyeIcon = document.getElementById('eyeIcon');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                eyeIcon.textContent = '🙈';
+            } else {
+                passwordField.type = 'password';
+                eyeIcon.textContent = '👁️';
+            }
+        }
+
+        function showPasswordReset() {
+            document.getElementById('resetModal').classList.remove('hidden');
+        }
+
+        function hidePasswordReset() {
+            document.getElementById('resetModal').classList.add('hidden');
+            document.getElementById('resetEmail').value = '';
+        }
+
+        async function sendPasswordReset() {
+            const email = document.getElementById('resetEmail').value;
+            if (!email) {
+                alert('Please enter your email address');
+                return;
+            }
+
+            const user = mockDB.users.find(function(u) { return u.email === email; });
+            if (!user) {
+                alert('No account found with that email address');
+                return;
+            }
+
+            const resetToken = Math.random().toString(36).substr(2, 15);
+            
+            try {
+                await emailjs.send('service_z3nppt7', 'template_40v3r7i', {
+                    to_email: email,
+                    reset_link: window.location.origin + '?reset=' + resetToken,
+                    user_name: email
+                });
+
+                alert('Password reset link sent to your email!');
+                hidePasswordReset();
+            } catch (error) {
+                console.error('Email sending failed:', error);
+                alert('Failed to send reset email. Please try again.');
+            }
+        }
+
+        async function handleAuth() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+
+            if (!email || !password) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            if (currentView === 'register') {
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                const studentCode = document.getElementById('studentCode').value;
+
+                if (password !== confirmPassword) {
+                    alert('Passwords do not match');
+                    return;
+                }
+
+                if (!validatePassword(password)) {
+                    alert('Password does not meet requirements');
+                    return;
+                }
+
+                if (mockDB.users.find(function(u) { return u.email === email; })) {
+                    alert('Email already exists');
+                    return;
+                }
+
+                await register(email, password, studentCode);
+            } else {
+                await login(email, password);
+            }
+        }
+
+        async function login(email, password) {
+            setLoading(true);
+            
+            const hashedPassword = hashPassword(password);
+            const user = mockDB.users.find(function(u) { 
+                return u.email === email && u.password === hashedPassword; 
+            });
+            
+            if (user) {
+                currentUser = user;
+                saveToStorage();
+                showApp();
+            } else {
+                alert('Invalid email or password');
+            }
+            
+            setLoading(false);
+        }
+
+        async function register(email, password, studentCode) {
+            setLoading(true);
+            
+            let userType = 'credits';
+            let credits = 0;
+            let accessExpiry = null;
+
+            if (studentCode) {
+                const code = mockDB.studentCodes.find(function(c) { 
+                    return c.code === studentCode && !c.used; 
+                });
+                if (code) {
+                    userType = 'student';
+                    const expiry = new Date();
+                    expiry.setMonth(expiry.getMonth() + code.months);
+                    accessExpiry = expiry.toISOString();
+
+                    code.used = true;
+                    code.usedBy = email;
+                    code.usedAt = new Date().toISOString();
+                } else {
+                    alert('Invalid or already used student code');
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            const newUser = {
+                id: Date.now().toString(),
+                email: email,
+                password: hashPassword(password),
+                userType: userType,
+                credits: credits,
+                accessExpiry: accessExpiry,
+                createdAt: new Date().toISOString(),
+                isAdmin: email === 'jacob@bigredstripe.com'
+            };
+
+            mockDB.users.push(newUser);
+            currentUser = newUser;
+            saveToStorage();
+            showApp();
+            setLoading(false);
+        }
+
+        function setLoading(loading) {
+            isLoading = loading;
+            const button = document.getElementById('authSubmit');
+            const spinner = document.getElementById('authSpinner');
+            
+            button.disabled = loading;
+            if (loading) {
+                spinner.classList.remove('hidden');
+            } else {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function showApp() {
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('appSection').classList.remove('hidden');
+            showSection('logline');
+            updateUI();
+        }
+
+        function showSection(section) {
+            document.getElementById('loglineSection').classList.add('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('historySection').classList.add('hidden');
+            document.getElementById('settingsSection').classList.add('hidden');
+            document.getElementById('purchaseSection').classList.add('hidden');
+
+            if (section === 'logline') {
+                document.getElementById('loglineSection').classList.remove('hidden');
+            } else if (section === 'history') {
+                document.getElementById('historySection').classList.remove('hidden');
+                loadHistory();
+            } else if (section === 'settings') {
+                document.getElementById('settingsSection').classList.remove('hidden');
+                loadSettings();
+            } else if (section === 'purchase') {
+                document.getElementById('purchaseSection').classList.remove('hidden');
+                updatePurchaseSection();
+            } else if (section === 'results') {
+                document.getElementById('resultsSection').classList.remove('hidden');
+            }
+        }
+
+        function updateUI() {
+            if (!currentUser) return;
+
+            const userStatus = document.getElementById('userStatus');
+            if (currentUser.userType === 'credits') {
+                userStatus.textContent = currentUser.credits + ' credits remaining';
+                userStatus.className = 'text-sm font-medium text-blue-600';
+            } else if (currentUser.userType === 'student') {
+                const daysLeft = calculateDaysRemaining(currentUser.accessExpiry);
+                userStatus.textContent = daysLeft + ' days remaining';
+                userStatus.className = 'text-sm font-medium text-green-600';
+            } else if (currentUser.userType === 'admin') {
+                userStatus.textContent = 'Unlimited access';
+                userStatus.className = 'text-sm font-medium text-purple-600';
+            }
+        }
+
+        function loadSettings() {
+            document.getElementById('newEmail').value = currentUser.email;
+
+            document.getElementById('creditUserPayment').classList.add('hidden');
+            document.getElementById('studentUserPayment').classList.add('hidden');
+            document.getElementById('adminUserPayment').classList.add('hidden');
+
+            if (currentUser.userType === 'credits') {
+                document.getElementById('creditUserPayment').classList.remove('hidden');
+                document.getElementById('currentCredits').textContent = currentUser.credits;
+            } else if (currentUser.userType === 'student') {
+                document.getElementById('studentUserPayment').classList.remove('hidden');
+                const daysLeft = calculateDaysRemaining(currentUser.accessExpiry);
+                document.getElementById('studentDaysLeft').textContent = daysLeft;
+            } else if (currentUser.userType === 'admin') {
+                document.getElementById('adminUserPayment').classList.remove('hidden');
+                document.getElementById('adminSettings').classList.remove('hidden');
+                updateAdminSection();
+            }
+        }
+
+        function updateAdminSection() {
+            document.getElementById('totalUsers').textContent = mockDB.users.filter(function(u) { return !u.isAdmin; }).length;
+            document.getElementById('totalEvaluations').textContent = mockDB.submissions.length;
+            document.getElementById('codesCount').textContent = mockDB.studentCodes.length;
+            document.getElementById('submissionsCount').textContent = mockDB.submissions.length;
+        }
+
+        // Core App Functions
+        async function evaluateLogline() {
+            const formData = {
+                genre: document.getElementById('genre').value,
+                tone: document.getElementById('tone').value,
+                mainCharacter: document.getElementById('mainCharacter').value,
+                antagonist: document.getElementById('antagonist').value,
+                incitingIncident: document.getElementById('incitingIncident').value,
+                storyDetails: document.getElementById('storyDetails').value,
+                logline: document.getElementById('logline').value
+            };
+
+            if (!formData.genre || !formData.tone || !formData.mainCharacter || !formData.antagonist || !formData.incitingIncident || !formData.storyDetails || !formData.logline) {
+                alert('Please fill in all fields before submitting.');
+                return;
+            }
+
+            if (currentUser.userType === 'credits' && currentUser.credits <= 0) {
+                alert('You have no credits remaining. Please purchase more credits to continue.');
+                showSection('purchase');
+                return;
+            }
+
+            if (currentUser.userType === 'student' && new Date(currentUser.accessExpiry) < new Date()) {
+                alert('Your student access has expired. Please purchase credits to continue.');
+                showSection('purchase');
+                return;
+            }
+
+            const button = document.getElementById('evaluateBtn');
+            const text = document.getElementById('evaluateText');
+            const spinner = document.getElementById('evaluateSpinner');
+            
+            button.disabled = true;
+            text.textContent = 'Evaluating Your Logline...';
+            spinner.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/.netlify/functions/evaluate-logline', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ formData: formData })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error('Backend error: ' + response.status + ' - ' + errorData.error);
+                }
+
+                const data = await response.json();
+                const claudeResponse = data.evaluation;
+
+                if (currentUser.userType === 'credits') {
+                    currentUser.credits -= 1;
+                    
+                    if (currentUser.credits === 10 || currentUser.credits === 5) {
+                        setTimeout(function() {
+                            alert('You have ' + currentUser.credits + ' credits remaining. Consider purchasing more!');
+                        }, 2000);
+                    } else if (currentUser.credits === 0) {
+                        setTimeout(function() {
+                            alert('You\'re out of credits! Purchase more to continue using the evaluator.');
+                        }, 2000);
+                    }
+                }
+
+                const submission = {
+                    id: Date.now().toString(),
+                    timestamp: new Date().toISOString(),
+                    userId: currentUser.id,
+                    userEmail: currentUser.email,
+                    formData: formData,
+                    claudeResponse: claudeResponse
+                };
+
+                mockDB.submissions.push(submission);
+                currentEvaluation = submission;
+                
+                const userIndex = mockDB.users.findIndex(function(u) { return u.id === currentUser.id; });
+                if (userIndex !== -1) {
+                    mockDB.users[userIndex] = currentUser;
+                }
+
+                saveToStorage();
+
+                document.getElementById('originalLogline').textContent = '"' + formData.logline + '"';
+                document.getElementById('evaluationResult').textContent = claudeResponse;
+                
+                showSection('results');
+                updateUI();
+
+            } catch (error) {
+                console.error('Error evaluating logline:', error);
+                alert('Sorry, there was an error evaluating your logline. Please try again.');
+            } finally {
+                button.disabled = false;
+                text.textContent = 'Get My Evaluation';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('genre').value = '';
+            document.getElementById('tone').value = '';
+            document.getElementById('mainCharacter').value = '';
+            document.getElementById('antagonist').value = '';
+            document.getElementById('incitingIncident').value = '';
+            document.getElementById('storyDetails').value = '';
+            document.getElementById('logline').value = '';
+            
+            showSection('logline');
+        }
+
+        // Purchase Functions
+        function updatePurchaseSection() {
+            const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
+            const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
+            
+            if (isBeta) {
+                document.getElementById('betaDiscount').classList.remove('hidden');
+                document.getElementById('price25').textContent = '$15';
+                document.getElementById('price50').textContent = '$28';
+                document.getElementById('price100').textContent = '$50';
+            } else {
+                document.getElementById('betaDiscount').classList.add('hidden');
+                document.getElementById('price25').textContent = '$30';
+                document.getElementById('price50').textContent = '$55';
+                document.getElementById('price100').textContent = '$100';
+            }
+        }
+
+        function purchaseCredits(amount) {
+            const prices = { 25: 30, 50: 55, 100: 100 };
+            const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
+            const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
+            const finalPrice = isBeta ? prices[amount] / 2 : prices[amount];
+
+            const discountText = isBeta ? ' (50% Beta Tester Discount!)' : '';
+            const message = 'Purchase ' + amount + ' credits for  + finalPrice + '?' + discountText;
+            
+            if (confirm(message)) {
+                currentUser.credits += amount;
+                
+                const userIndex = mockDB.users.findIndex(function(u) { return u.id === currentUser.id; });
+                if (userIndex !== -1) {
+                    mockDB.users[userIndex] = currentUser;
+                }
+                
+                saveToStorage();
+                updateUI();
+                updatePurchaseSection();
+                alert('Successfully purchased ' + amount + ' credits!');
+            }
+        }
+
+        // Simplified placeholder functions
+        function loadHistory() {
+            document.getElementById('noHistory').classList.remove('hidden');
+        }
+
+        function toggleShowAllHistory() {
+            // Placeholder
+        }
+
+        function downloadEvaluationPDF() {
+            alert('PDF download feature will be implemented with jsPDF integration');
+        }
+
+        function updateEmail() {
+            alert('Email updated successfully!');
+        }
+
+        function updatePassword() {
+            alert('Password updated successfully!');
+        }
+
+        function managePayment() {
+            alert('Payment management integration would go here (Stripe Customer Portal)');
+        }
+
+        function generateStudentCodes() {
+            const quantity = parseInt(document.getElementById('codeQuantity').value) || 1;
+            const months = parseInt(document.getElementById('codeMonths').value) || 3;
+
+            const newCodes = [];
+            for (let i = 0; i < quantity; i++) {
+                const code = 'STUDENT-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+                newCodes.push({
+                    id: Date.now().toString() + i,
+                    code: code,
+                    months: months,
+                    createdAt: new Date().toISOString(),
+                    used: false
+                });
+            }
+
+            mockDB.studentCodes.push.apply(mockDB.studentCodes, newCodes);
+            saveToStorage();
+            updateAdminSection();
+            
+            alert('Generated ' + quantity + ' codes for ' + months + ' months each!\n\nCodes: ' + newCodes.map(function(c) { return c.code; }).join(', '));
+        }
+
+        function downloadCodes() {
+            alert('Codes download feature would generate CSV file');
+        }
+
+        function downloadAllSubmissions() {
+            alert('Submissions download feature would generate CSV file');
+        }
+
+        function logout() {
+            localStorage.removeItem('brs_user');
+            currentUser = null;
+            currentView = 'login';
+            currentEvaluation = null;
+            
+            document.getElementById('appSection').classList.add('hidden');
+            document.getElementById('authSection').classList.remove('hidden');
+            
+            document.getElementById('authEmail').value = '';
+            document.getElementById('authPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('studentCode').value = '';
+            
+            if (currentView !== 'login') {
+                toggleAuthMode();
+            }
+        }
+    </script>
+</body>
+</html>
