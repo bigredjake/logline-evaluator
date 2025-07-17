@@ -697,11 +697,12 @@
             const resetToken = Math.random().toString(36).substr(2, 15);
             
             try {
-                await emailjs.send('service_z3nppt7', 'template_40v3r7i', {
-                    to_email: email,
-                    reset_link: window.location.origin + '?reset=' + resetToken,
-                    user_name: email
-                });
+             await emailjs.send('service_z3nppt7', 'template_40v3r7i', {
+    to_email: email,
+    email: email,
+    reset_link: window.location.origin + '?reset=' + resetToken,
+    user_name: email
+});
 
                 alert('Password reset link sent to your email!');
                 hidePasswordReset();
