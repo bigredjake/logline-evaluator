@@ -199,7 +199,7 @@
             
             try {
                 // Send email via EmailJS (you'll need to configure this)
-                await emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', {
+               await emailjs.send('service_z3nppt7', 'template_40v3r7i', {
                     to_email: email,
                     reset_link: `${window.location.origin}?reset=${resetToken}`,
                     user_name: email
@@ -1353,7 +1353,7 @@
 
     <script>
         // Initialize EmailJS (you'll need to replace with your actual keys)
-        emailjs.init("YOUR_EMAILJS_USER_ID");
+        emailjs.init("7cimGrBdIHCn4gSDy");
 
         // Initialize Stripe (you'll need to replace with your actual key)
         const stripe = Stripe('YOUR_STRIPE_PUBLISHABLE_KEY');
