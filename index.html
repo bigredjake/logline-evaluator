@@ -758,14 +758,27 @@ function updatePasswordFromReset(token) {
         mockDB = JSON.parse(savedDB);
     }
     
-    // Find admin user and update password
-    const adminUser = mockDB.users.find(u => u.email === 'jacob@bigredstripe.com');
-    if (adminUser) {
-        adminUser.password = btoa(newPassword + 'salt123'); // Hash the new password
-        localStorage.setItem('brs_db', JSON.stringify(mockDB)); // Save updated database
+    // TODO: In real app, validate the reset token and find the specific user
+    // For now, we'll find the user who requested the reset
+    // Since we don't store token-to-user mapping, we'll need to prompt for email
+    
+    const userEmail = prompt('Please enter your email address to confirm the password reset:');
+    if (!userEmail) {
+        alert('Email address required to reset password');
+        return;
     }
     
-    alert('Password updated successfully! You can now login with your new password.');
+    // Find ANY user with that email and update password
+    const user = mockDB.users.find(u => u.email === userEmail);
+    if (user) {
+        user.password = btoa(newPassword + 'salt123'); // Hash the new password
+        localStorage.setItem('brs_db', JSON.stringify(mockDB)); // Save updated database
+        alert('Password updated successfully! You can now login with your new password.');
+    } else {
+        alert('No account found with that email address');
+        return;
+    }
+    
     window.location.href = window.location.origin;
 }
 
