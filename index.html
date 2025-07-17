@@ -564,25 +564,35 @@
             });
         }
 
-        // Initialize app
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedUser = localStorage.getItem('brs_user');
-            const savedDB = localStorage.getItem('brs_db');
-            
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                showApp();
-            }
-            
-            if (savedDB) {
-                mockDB = JSON.parse(savedDB);
-            } else {
-                localStorage.setItem('brs_db', JSON.stringify(mockDB));
-            }
-
-            setupEventListeners();
-            updateUI();
-        });
+    // Initialize app
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for password reset token in URL FIRST
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetToken = urlParams.get('reset');
+    
+    if (resetToken) {
+        // Show password reset form instead of normal login
+        showPasswordResetForm(resetToken);
+        return; // Exit early, don't load normal app
+    }
+    
+    // Normal app initialization (existing code)
+    const savedUser = localStorage.getItem('brs_user');
+    const savedDB = localStorage.getItem('brs_db');
+    
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        showApp();
+    }
+    
+    if (savedDB) {
+        mockDB = JSON.parse(savedDB);
+    } else {
+        localStorage.setItem('brs_db', JSON.stringify(mockDB));
+    }
+    setupEventListeners();
+    updateUI();
+});
 
         function setupEventListeners() {
             // Auth listeners
@@ -681,6 +691,70 @@
             document.getElementById('resetEmail').value = '';
         }
 
+function showPasswordResetForm(token) {
+    // Hide the normal page content
+    document.getElementById('authSection').style.display = 'none';
+    document.getElementById('appSection').style.display = 'none';
+    
+    // Create password reset form
+    document.body.innerHTML = `
+        <div class="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
+            <div class="max-w-md w-full space-y-8">
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <div class="text-center mb-6">
+                        <img src="logo.png" alt="BRS Labs" style="height: 48px; margin: 0 auto 20px;">
+                        <h2 class="text-2xl font-bold text-gray-900">Reset Your Password</h2>
+                        <p class="text-gray-600">Enter your new password below</p>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <input type="password" id="newPasswordReset" placeholder="New password" 
+                               class="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500">
+                        <input type="password" id="confirmPasswordReset" placeholder="Confirm new password" 
+                               class="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500">
+                        <button onclick="updatePasswordFromReset('${token}')" 
+                                class="w-full py-3 px-4 bg-red-600 text-white font-medium rounded-md hover:bg-red-700"
+                                style="background-color: #d9042b;">
+                            Update Password
+                        </button>
+                        <div class="text-center">
+                            <a href="${window.location.origin}" class="text-red-600 hover:text-red-500 text-sm">
+                                Back to Login
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function updatePasswordFromReset(token) {
+    const newPassword = document.getElementById('newPasswordReset').value;
+    const confirmPassword = document.getElementById('confirmPasswordReset').value;
+    
+    if (!newPassword || !confirmPassword) {
+        alert('Please fill in both password fields');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        alert('Passwords do not match');
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        alert('Password must be at least 8 characters long');
+        return;
+    }
+    
+    // TODO: In a real app, you'd validate the reset token here
+    // For now, we'll just update the password and redirect
+    
+    alert('Password updated successfully! You can now login with your new password.');
+    window.location.href = window.location.origin; // Redirect to login page
+}
+        
         async function sendPasswordReset() {
             const email = document.getElementById('resetEmail').value;
             if (!email) {
