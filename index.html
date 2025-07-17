@@ -748,11 +748,21 @@ function updatePasswordFromReset(token) {
         return;
     }
     
-    // TODO: In a real app, you'd validate the reset token here
-    // For now, we'll just update the password and redirect
+    // Load the database
+    const savedDB = localStorage.getItem('brs_db');
+    if (savedDB) {
+        mockDB = JSON.parse(savedDB);
+    }
+    
+    // Find admin user and update password
+    const adminUser = mockDB.users.find(u => u.email === 'jacob@bigredstripe.com');
+    if (adminUser) {
+        adminUser.password = btoa(newPassword + 'salt123'); // Hash the new password
+        localStorage.setItem('brs_db', JSON.stringify(mockDB)); // Save updated database
+    }
     
     alert('Password updated successfully! You can now login with your new password.');
-    window.location.href = window.location.origin; // Redirect to login page
+    window.location.href = window.location.origin;
 }
         
         async function sendPasswordReset() {
