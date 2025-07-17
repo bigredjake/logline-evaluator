@@ -907,7 +907,7 @@ function updatePasswordFromReset(token) {
                 credits: credits,
                 accessExpiry: accessExpiry,
                 createdAt: new Date().toISOString(),
-                isAdmin: email === 'jacob@bigredstripe.com'
+                isAdmin: ['jacob@bigredstripe.com'].includes(email)
             };
 
             mockDB.users.push(newUser);
