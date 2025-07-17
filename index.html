@@ -6,10 +6,12 @@
     <title>BRS Labs - Logline Evaluator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
-<script>
-  (function(){
-    emailjs.init("7cimGrBdlHCn4gSDy");
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script type="text/javascript">
+  (function() {
+    emailjs.init({
+      publicKey: "7cimGrBdlHCn4gSDy",
+    });
   })();
 </script>
     <script src="https://js.stripe.com/v3/"></script>
