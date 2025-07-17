@@ -1031,7 +1031,7 @@
             const finalPrice = isBeta ? prices[amount] / 2 : prices[amount];
 
             const discountText = isBeta ? ' (50% Beta Tester Discount!)' : '';
-            const message = 'Purchase ' + amount + ' credits for  + finalPrice + '?' + discountText;
+            const message = 'Purchase ' + amount + ' credits for $'  + finalPrice + '?' + discountText;
             
             if (confirm(message)) {
                 currentUser.credits += amount;
