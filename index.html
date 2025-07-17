@@ -782,23 +782,124 @@ function updatePasswordFromReset(token) {
     window.location.href = window.location.origin;
 }
 
-        function viewAllUsers() {
+     function viewAllUsers() {
     const users = mockDB.users.filter(function(u) { return !u.isAdmin; });
-    let userList = 'Registered Users:\n\n';
     
     if (users.length === 0) {
         alert('No users have registered yet.');
         return;
     }
     
-    users.forEach(function(user) {
-        userList += 'Email: ' + user.email + '\n';
-        userList += 'Type: ' + user.userType + '\n';
-        userList += 'Credits: ' + user.credits + '\n';
-        userList += 'Created: ' + formatDate(user.createdAt) + '\n\n';
-    });
+    // Create user management modal instead of simple alert
+    showUserManagementModal(users);
+}
+
+function showUserManagementModal(users) {
+    // Create modal HTML
+    const modalHTML = `
+        <div id="userManagementModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-4/5 max-w-4xl shadow-lg rounded-md bg-white">
+                <div class="mt-3">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-medium text-gray-900">User Management</h3>
+                        <button onclick="closeUserManagementModal()" class="text-gray-500 hover:text-gray-700">&times;</button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border border-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left">Email</th>
+                                    <th class="px-4 py-2 text-left">Type</th>
+                                    <th class="px-4 py-2 text-left">Credits/Days</th>
+                                    <th class="px-4 py-2 text-left">Status</th>
+                                    <th class="px-4 py-2 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${users.map(user => `
+                                    <tr class="border-t">
+                                        <td class="px-4 py-2">${user.email}</td>
+                                        <td class="px-4 py-2">${user.userType}</td>
+                                        <td class="px-4 py-2">
+                                            ${user.userType === 'credits' ? user.credits + ' credits' : 
+                                              (user.accessExpiry ? calculateDaysRemaining(user.accessExpiry) + ' days' : 'N/A')}
+                                        </td>
+                                        <td class="px-4 py-2">
+                                            <span class="px-2 py-1 rounded text-xs ${user.suspended ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
+                                                ${user.suspended ? 'Suspended' : 'Active'}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-2">
+                                            <div class="flex space-x-2">
+                                                ${user.suspended ? 
+                                                    `<button onclick="unsuspendUser('${user.id}')" class="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Unsuspend</button>` :
+                                                    `<button onclick="suspendUser('${user.id}')" class="px-2 py-1 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700">Suspend</button>`
+                                                }
+                                                <button onclick="deleteUser('${user.id}')" class="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">Delete</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     
-    alert(userList);
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function closeUserManagementModal() {
+    const modal = document.getElementById('userManagementModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function suspendUser(userId) {
+    if (confirm('Are you sure you want to suspend this user? They will not be able to login.')) {
+        const user = mockDB.users.find(u => u.id === userId);
+        if (user) {
+            user.suspended = true;
+            saveToStorage();
+            alert('User suspended successfully.');
+            closeUserManagementModal();
+            viewAllUsers(); // Refresh the list
+        }
+    }
+}
+
+function unsuspendUser(userId) {
+    if (confirm('Are you sure you want to unsuspend this user?')) {
+        const user = mockDB.users.find(u => u.id === userId);
+        if (user) {
+            user.suspended = false;
+            saveToStorage();
+            alert('User unsuspended successfully.');
+            closeUserManagementModal();
+            viewAllUsers(); // Refresh the list
+        }
+    }
+}
+
+function deleteUser(userId) {
+    if (confirm('Are you sure you want to PERMANENTLY DELETE this user? This cannot be undone.')) {
+        if (confirm('This will permanently delete all user data. Are you absolutely sure?')) {
+            // Remove user from database
+            mockDB.users = mockDB.users.filter(u => u.id !== userId);
+            // Remove user's submissions
+            mockDB.submissions = mockDB.submissions.filter(s => s.userId !== userId);
+            saveToStorage();
+            updateAdminSection();
+            alert('User deleted permanently.');
+            closeUserManagementModal();
+            viewAllUsers(); // Refresh the list
+        }
+    }
 }
         
         async function sendPasswordReset() {
