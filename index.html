@@ -475,7 +475,7 @@
         // Initialize EmailJS is in the Head
    
         // Initialize Stripe (you'll need to replace with your actual key)
-        const stripe = Stripe('YOUR_STRIPE_PUBLISHABLE_KEY');
+       const stripe = Stripe('pk_test_51IAqQXGeynMWYbxDVS6wPalfpyuFfRknJN1xnYqmXGFT2B37foYZHdKYkMKohUZAgOOHflOGLYgiKev537GuOZKi00XO4MKDk9');
 
         // Global state
         let currentUser = null;
@@ -578,6 +578,18 @@ document.addEventListener('DOMContentLoaded', function() {
         showPasswordResetForm(resetToken);
         return; // Exit early, don't load normal app
     }
+
+     // ADD THIS NEW SECTION FOR PAYMENT SUCCESS
+    const paymentSuccess = urlParams.get('payment');
+    const sessionId = urlParams.get('session_id');
+    const creditAmount = urlParams.get('amount');
+    const userId = urlParams.get('user_id');
+
+    if (paymentSuccess === 'success' && sessionId && creditAmount && userId) {
+        handlePaymentSuccess(sessionId, userId, parseInt(creditAmount));
+        return; // Exit early to handle payment success
+    }
+    // END NEW SECTION
     
     // Normal app initialization (existing code)
     const savedUser = localStorage.getItem('brs_user');
@@ -1157,29 +1169,50 @@ function updatePasswordFromReset(token) {
             }
         }
 
-        function purchaseCredits(amount) {
-            const prices = { 25: 30, 50: 55, 100: 100 };
-            const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
-            const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
-            const finalPrice = isBeta ? prices[amount] / 2 : prices[amount];
+        async function purchaseCredits(amount) {
+    const prices = { 25: 30, 50: 55, 100: 100 };
+    const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id).length;
+    const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
+    const finalPrice = isBeta ? Math.floor(prices[amount] / 2) : prices[amount];
 
-            const discountText = isBeta ? ' (50% Beta Tester Discount!)' : '';
-            const message = 'Purchase ' + amount + ' credits for $'  + finalPrice + '?' + discountText;
-            
-            if (confirm(message)) {
-                currentUser.credits += amount;
-                
-                const userIndex = mockDB.users.findIndex(function(u) { return u.id === currentUser.id; });
-                if (userIndex !== -1) {
-                    mockDB.users[userIndex] = currentUser;
-                }
-                
-                saveToStorage();
-                updateUI();
-                updatePurchaseSection();
-                alert('Successfully purchased ' + amount + ' credits!');
-            }
+    try {
+        // Call your Netlify function to create payment session
+        const response = await fetch('/.netlify/functions/create-payment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                amount: amount,
+                price: finalPrice,
+                userEmail: currentUser.email,
+                userId: currentUser.id,
+                isBeta: isBeta
+            })
+        });
+
+        const session = await response.json();
+
+        if (!response.ok) {
+            throw new Error(session.error || 'Failed to create payment session');
         }
+
+        // Redirect to Stripe Checkout
+        const stripe = Stripe('pk_test_51IAqQXGeynMWYbxDVS6wPalfpyuFfRknJN1xnYqmXGFT2B37foYZHdKYkMKohUZAgOOHflOGLYgiKev537GuOZKi00XO4MKDk9');
+        const { error } = await stripe.redirectToCheckout({
+            sessionId: session.id
+        });
+
+        if (error) {
+            console.error('Stripe redirect error:', error);
+            alert('Error redirecting to payment: ' + error.message);
+        }
+
+    } catch (error) {
+        console.error('Payment initiation error:', error);
+        alert('Error starting payment process: ' + error.message);
+    }
+}
 
         // Simplified placeholder functions
         function loadHistory() {
@@ -1254,6 +1287,127 @@ function updatePasswordFromReset(token) {
             if (currentView !== 'login') {
                 toggleAuthMode();
             }
+        }
+        async function handlePaymentSuccess(sessionId, userId, expectedAmount) {
+            try {
+                // Show loading state
+                document.body.innerHTML = `
+                    <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+                        <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+                            <div class="spinner mx-auto mb-4" style="width: 40px; height: 40px;"></div>
+                            <h2 class="text-xl font-semibold text-gray-900 mb-2">Processing your payment...</h2>
+                            <p class="text-gray-600">Please wait while we verify your purchase.</p>
+                        </div>
+                    </div>
+                `;
+
+                // Verify payment with our backend
+                const response = await fetch('/.netlify/functions/handle-payment-success', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sessionId: sessionId,
+                        userId: userId,
+                        expectedAmount: expectedAmount
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Payment verification failed');
+                }
+
+                // Payment verified successfully, add credits to user account
+                const savedDB = localStorage.getItem('brs_db');
+                if (savedDB) {
+                    mockDB = JSON.parse(savedDB);
+                }
+
+                // Find and update the user
+                const userIndex = mockDB.users.findIndex(u => u.id === userId);
+                if (userIndex === -1) {
+                    throw new Error('User not found');
+                }
+
+                // Add credits to user account
+                mockDB.users[userIndex].credits += result.creditAmount;
+                
+                // Save updated database
+                localStorage.setItem('brs_db', JSON.stringify(mockDB));
+
+                // Update current user if it's the same user
+                const savedUser = localStorage.getItem('brs_user');
+                if (savedUser) {
+                    const user = JSON.parse(savedUser);
+                    if (user.id === userId) {
+                        user.credits += result.creditAmount;
+                        localStorage.setItem('brs_user', JSON.stringify(user));
+                    }
+                }
+
+                // Show success message
+                document.body.innerHTML = `
+                    <div class="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
+                        <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+                            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                            <h2 class="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
+                            <p class="text-gray-600 mb-4">
+                                ${result.creditAmount} credits have been added to your account.
+                            </p>
+                            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                                <p class="text-sm text-gray-600">
+                                    Payment Amount: $${result.paymentAmount}<br>
+                                    Credits Added: ${result.creditAmount}<br>
+                                    Email: ${result.customerEmail}
+                                </p>
+                            </div>
+                            <button onclick="redirectToApp()" 
+                                    class="w-full py-3 px-4 bg-red-600 text-white font-medium rounded-md hover:bg-red-700"
+                                    style="background-color: #d9042b;">
+                                Continue to Logline Evaluator
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Payment processing error:', error);
+                
+                // Show error message
+                document.body.innerHTML = `
+                    <div class="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
+                        <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+                            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </div>
+                            <h2 class="text-2xl font-bold text-gray-900 mb-2">Payment Processing Error</h2>
+                            <p class="text-gray-600 mb-6">
+                                There was an issue processing your payment. Please contact support if you were charged.
+                            </p>
+                            <p class="text-sm text-gray-500 mb-6">Error: ${error.message}</p>
+                            <button onclick="redirectToApp()" 
+                                    class="w-full py-3 px-4 bg-gray-600 text-white font-medium rounded-md hover:bg-gray-700">
+                                Return to App
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function redirectToApp() {
+            // Clean URL and redirect to main app
+            const cleanUrl = window.location.origin;
+            window.location.href = cleanUrl;
         }
     </script>
 </body>
