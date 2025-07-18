@@ -24,7 +24,7 @@ exports.handler = async (event, context) => {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.URL}/payment-success?session_id={CHECKOUT_SESSION_ID}&amount=${amount}&user_id=${userId}`,
+		success_url: `${process.env.URL}?payment=success&session_id={CHECKOUT_SESSION_ID}&amount=${amount}&user_id=${userId}`,
       cancel_url: `${process.env.URL}`,
       customer_email: userEmail,
       metadata: {
