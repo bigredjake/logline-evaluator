@@ -1495,7 +1495,7 @@ function deleteUser(userId) {
     document.getElementById('adminSettings').classList.add('hidden');
     document.getElementById('adminUserPayment').classList.add('hidden');
     
-    localStorage.removeItem('brs_user');
+  localStorage.removeItem('brs_user');
     currentUser = null;
     currentView = 'login';
     currentEvaluation = null;
@@ -1512,7 +1512,6 @@ function deleteUser(userId) {
         toggleAuthMode();
     }
 }
-        
     </script>
 </body>
 </html>
