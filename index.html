@@ -623,6 +623,26 @@ document.addEventListener('DOMContentLoaded', function() {
         showPasswordResetForm(resetToken);
         return; // Exit early, don't load normal app
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+    // Check for password reset token in URL FIRST
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetToken = urlParams.get('reset');
+    
+    if (resetToken) {
+        // Show password reset form instead of normal login
+        showPasswordResetForm(resetToken);
+        return; // Exit early, don't load normal app
+    }
+    
+    // Check for payment success
+    const paymentSuccess = urlParams.get('payment');
+    if (paymentSuccess === 'success') {
+        const amount = urlParams.get('amount');
+        const sessionId = urlParams.get('session_id');
+        handlePaymentSuccess(amount, sessionId);
+        return;
+    }
     
     // Normal app initialization (existing code)
     const savedUser = localStorage.getItem('brs_user');
@@ -1384,6 +1404,33 @@ function deleteUser(userId) {
     } catch (error) {
         console.error('Payment error:', error);
         alert('Payment failed. Please try again.');
+    }
+}
+    function handlePaymentSuccess(amount, sessionId) {
+    // Add credits to user account
+    const savedDB = localStorage.getItem('brs_db');
+    if (savedDB) {
+        mockDB = JSON.parse(savedDB);
+    }
+    
+    const savedUser = localStorage.getItem('brs_user');
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        
+        // Add purchased credits
+        currentUser.credits += parseInt(amount);
+        
+        // Update user in database
+        const userIndex = mockDB.users.findIndex(function(u) { return u.id === currentUser.id; });
+        if (userIndex !== -1) {
+            mockDB.users[userIndex] = currentUser;
+        }
+        
+        saveToStorage();
+        
+        // Show success message and redirect to app
+        alert('Payment successful! ' + amount + ' credits have been added to your account.');
+        showApp();
     }
 }
 
