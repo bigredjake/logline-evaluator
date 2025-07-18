@@ -1,0 +1,8 @@
+{
+  "name": "logline-evaluator",
+  "version": "1.0.0",
+  "description": "BRS Labs Logline Evaluator",
+  "dependencies": {
+    "stripe": "^10.0.0"
+  }
+}
