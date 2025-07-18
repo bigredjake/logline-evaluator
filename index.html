@@ -475,7 +475,7 @@
         // Initialize EmailJS is in the Head
    
         // Initialize Stripe (you'll need to replace with your actual key)
-        const stripe = Stripe('YOUR_STRIPE_PUBLISHABLE_KEY');
+      const stripe = Stripe('pk_test_51IAqQXGeynMWYbxDVS6wPalfpyuFfRknJN1xnYqmXGFT2B37foYZHdKYkMKohUZAgOOHflOGLYgiKev537GuOZKi00XO4MKDk9');
 
         // Global state
         let currentUser = null;
@@ -1344,29 +1344,48 @@ function deleteUser(userId) {
             }
         }
 
-        function purchaseCredits(amount) {
-            const prices = { 25: 30, 50: 55, 100: 100 };
-            const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
-            const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
-            const finalPrice = isBeta ? prices[amount] / 2 : prices[amount];
+     async function purchaseCredits(amount) {
+    const prices = { 25: 30, 50: 55, 100: 100 };
+    const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
+    const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
+    const finalPrice = isBeta ? prices[amount] / 2 : prices[amount];
 
-            const discountText = isBeta ? ' (50% Beta Tester Discount!)' : '';
-            const message = 'Purchase ' + amount + ' credits for $'  + finalPrice + '?' + discountText;
-            
-            if (confirm(message)) {
-                currentUser.credits += amount;
-                
-                const userIndex = mockDB.users.findIndex(function(u) { return u.id === currentUser.id; });
-                if (userIndex !== -1) {
-                    mockDB.users[userIndex] = currentUser;
-                }
-                
-                saveToStorage();
-                updateUI();
-                updatePurchaseSection();
-                alert('Successfully purchased ' + amount + ' credits!');
-            }
+    try {
+        // Create Stripe checkout session
+        const response = await fetch('/.netlify/functions/create-payment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                amount: amount,
+                price: finalPrice,
+                userEmail: currentUser.email,
+                userId: currentUser.id,
+                isBeta: isBeta
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Payment setup failed');
         }
+
+        const session = await response.json();
+        
+        // Redirect to Stripe checkout
+        const result = await stripe.redirectToCheckout({
+            sessionId: session.id
+        });
+
+        if (result.error) {
+            alert('Payment failed: ' + result.error.message);
+        }
+
+    } catch (error) {
+        console.error('Payment error:', error);
+        alert('Payment failed. Please try again.');
+    }
+}
 
         // Simplified placeholder functions
         function loadHistory() {
