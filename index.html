@@ -484,10 +484,55 @@
         let currentHistoryPage = 1;
         let historyPerPage = 10;
         let showAllHistory = false;
-        let currentEvaluation = null;
-        
-        // Mock database
-        let mockDB = {
+       let currentEvaluation = null;
+
+// Rate limiting for login attempts
+let loginAttempts = {};
+let passwordResetAttempts = {};
+
+function isRateLimited(email, type) {
+    const now = Date.now();
+    const attempts = type === 'login' ? loginAttempts : passwordResetAttempts;
+    
+    if (!attempts[email]) {
+        attempts[email] = { count: 0, lastAttempt: now };
+    }
+    
+    const userAttempts = attempts[email];
+    
+    // Reset counter if more than 15 minutes have passed
+    if (now - userAttempts.lastAttempt > 15 * 60 * 1000) {
+        userAttempts.count = 0;
+    }
+    
+    // Check if rate limited (max 5 attempts per 15 minutes)
+    if (userAttempts.count >= 5) {
+        const timeLeft = Math.ceil((userAttempts.lastAttempt + 15 * 60 * 1000 - now) / 1000 / 60);
+        return { limited: true, timeLeft: timeLeft };
+    }
+    
+    return { limited: false };
+}
+
+function recordAttempt(email, type, success) {
+    const attempts = type === 'login' ? loginAttempts : passwordResetAttempts;
+    
+    if (!attempts[email]) {
+        attempts[email] = { count: 0, lastAttempt: Date.now() };
+    }
+    
+    if (success) {
+        // Reset on successful attempt
+        attempts[email].count = 0;
+    } else {
+        // Increment on failed attempt
+        attempts[email].count++;
+        attempts[email].lastAttempt = Date.now();
+    }
+}
+
+// Mock database
+let mockDB = {
             users: [{
                 id: 'admin-001',
                 email: 'jacob@bigredstripe.com',
@@ -902,36 +947,53 @@ function deleteUser(userId) {
     }
 }
         
-        async function sendPasswordReset() {
-            const email = document.getElementById('resetEmail').value;
-            if (!email) {
-                alert('Please enter your email address');
-                return;
-            }
+   async function sendPasswordReset() {
+    const email = document.getElementById('resetEmail').value;
+    if (!email) {
+        alert('Please enter your email address');
+        return;
+    }
+    
+    // Check rate limiting
+    const rateCheck = isRateLimited(email, 'reset');
+    if (rateCheck.limited) {
+        alert('Too many password reset attempts. Please try again in ' + rateCheck.timeLeft + ' minutes.');
+        return;
+    }
 
-            const user = mockDB.users.find(function(u) { return u.email === email; });
-            if (!user) {
-                alert('No account found with that email address');
-                return;
-            }
+    const user = mockDB.users.find(function(u) { return u.email === email; });
+    if (!user) {
+        recordAttempt(email, 'reset', false);
+        alert('No account found with that email address');
+        return;
+    }
+    
+    // Check if user is suspended
+    if (user.suspended) {
+        recordAttempt(email, 'reset', false);
+        alert('Your account has been suspended. Please contact support for assistance.');
+        return;
+    }
 
-            const resetToken = Math.random().toString(36).substr(2, 15);
-            
-            try {
-             await emailjs.send('service_z3nppt7', 'template_40v3r7i', {
-    to_email: email,
-    email: email,
-    reset_link: window.location.origin + '?reset=' + resetToken,
-    user_name: email
-});
+    const resetToken = Math.random().toString(36).substr(2, 15);
+    
+    try {
+        await emailjs.send('service_z3nppt7', 'template_40v3r7i', {
+            to_email: email,
+            email: email,
+            reset_link: window.location.origin + '?reset=' + resetToken,
+            user_name: email
+        });
 
-                alert('Password reset link sent to your email!');
-                hidePasswordReset();
-            } catch (error) {
-                console.error('Email sending failed:', error);
-                alert('Failed to send reset email. Please try again.');
-            }
-        }
+        recordAttempt(email, 'reset', true);
+        alert('Password reset link sent to your email!');
+        hidePasswordReset();
+    } catch (error) {
+        recordAttempt(email, 'reset', false);
+        console.error('Email sending failed:', error);
+        alert('Failed to send reset email. Please try again.');
+    }
+}
 
         async function handleAuth() {
             const email = document.getElementById('authEmail').value;
@@ -967,24 +1029,43 @@ function deleteUser(userId) {
             }
         }
 
-        async function login(email, password) {
-            setLoading(true);
-            
-            const hashedPassword = hashPassword(password);
-            const user = mockDB.users.find(function(u) { 
-                return u.email === email && u.password === hashedPassword; 
-            });
-            
-            if (user) {
-                currentUser = user;
-                saveToStorage();
-                showApp();
-            } else {
-                alert('Invalid email or password');
-            }
-            
-            setLoading(false);
-        }
+      async function login(email, password) {
+    // Check rate limiting first
+    const rateCheck = isRateLimited(email, 'login');
+    if (rateCheck.limited) {
+        alert('Too many login attempts. Please try again in ' + rateCheck.timeLeft + ' minutes.');
+        return;
+    }
+    
+    setLoading(true);
+    
+    const hashedPassword = hashPassword(password);
+    const user = mockDB.users.find(function(u) { 
+        return u.email === email && u.password === hashedPassword; 
+    });
+    
+    if (!user) {
+        recordAttempt(email, 'login', false);
+        alert('Invalid email or password');
+        setLoading(false);
+        return;
+    }
+    
+    // Check if user is suspended
+    if (user.suspended) {
+        recordAttempt(email, 'login', false);
+        alert('Your account has been suspended. Please contact support.');
+        setLoading(false);
+        return;
+    }
+    
+    // Successful login
+    recordAttempt(email, 'login', true);
+    currentUser = user;
+    saveToStorage();
+    showApp();
+    setLoading(false);
+}
 
         async function register(email, password, studentCode) {
             setLoading(true);
