@@ -636,13 +636,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Check for payment success
-    const paymentSuccess = urlParams.get('payment');
-    if (paymentSuccess === 'success') {
-        const amount = urlParams.get('amount');
-        const sessionId = urlParams.get('session_id');
-        handlePaymentSuccess(amount, sessionId);
-        return;
-    }
+  //  const paymentSuccess = urlParams.get('payment');
+  //  if (paymentSuccess === 'success') {
+  //      const amount = urlParams.get('amount');
+  //      const sessionId = urlParams.get('session_id');
+  //      handlePaymentSuccess(amount, sessionId);
+  //      return;
+  //  }
     
     // Normal app initialization (existing code)
     const savedUser = localStorage.getItem('brs_user');
@@ -1405,7 +1405,8 @@ async function purchaseCredits(amount) {
     }
 }
 
-function handlePaymentSuccess(amount, sessionId) {
+/*
+    function handlePaymentSuccess(amount, sessionId) {
     const savedDB = localStorage.getItem('brs_db');
     if (savedDB) {
         mockDB = JSON.parse(savedDB);
@@ -1428,6 +1429,7 @@ function handlePaymentSuccess(amount, sessionId) {
         showApp();
     }
 }
+*/
 
         // Simplified placeholder functions
         function loadHistory() {
