@@ -475,7 +475,7 @@
         // Initialize EmailJS is in the Head
    
         // Initialize Stripe (you'll need to replace with your actual key)
-   //  const stripe = Stripe('pk_test_51IAqQXGeynMWYbxDVS6wPalfpyuFfRknJN1xnYqmXGFT2B37foYZHdKYkMKohUZAgOOHflOGLYgiKev537GuOZKi00XO4MKDk9');
+        const stripe = Stripe('YOUR_STRIPE_PUBLISHABLE_KEY');
 
         // Global state
         let currentUser = null;
@@ -484,55 +484,10 @@
         let currentHistoryPage = 1;
         let historyPerPage = 10;
         let showAllHistory = false;
-       let currentEvaluation = null;
-
-// Rate limiting for login attempts
-let loginAttempts = {};
-let passwordResetAttempts = {};
-
-function isRateLimited(email, type) {
-    const now = Date.now();
-    const attempts = type === 'login' ? loginAttempts : passwordResetAttempts;
-    
-    if (!attempts[email]) {
-        attempts[email] = { count: 0, lastAttempt: now };
-    }
-    
-    const userAttempts = attempts[email];
-    
-    // Reset counter if more than 15 minutes have passed
-    if (now - userAttempts.lastAttempt > 15 * 60 * 1000) {
-        userAttempts.count = 0;
-    }
-    
-    // Check if rate limited (max 5 attempts per 15 minutes)
-    if (userAttempts.count >= 5) {
-        const timeLeft = Math.ceil((userAttempts.lastAttempt + 15 * 60 * 1000 - now) / 1000 / 60);
-        return { limited: true, timeLeft: timeLeft };
-    }
-    
-    return { limited: false };
-}
-
-function recordAttempt(email, type, success) {
-    const attempts = type === 'login' ? loginAttempts : passwordResetAttempts;
-    
-    if (!attempts[email]) {
-        attempts[email] = { count: 0, lastAttempt: Date.now() };
-    }
-    
-    if (success) {
-        // Reset on successful attempt
-        attempts[email].count = 0;
-    } else {
-        // Increment on failed attempt
-        attempts[email].count++;
-        attempts[email].lastAttempt = Date.now();
-    }
-}
-
-// Mock database
-let mockDB = {
+        let currentEvaluation = null;
+        
+        // Mock database
+        let mockDB = {
             users: [{
                 id: 'admin-001',
                 email: 'jacob@bigredstripe.com',
@@ -623,26 +578,6 @@ document.addEventListener('DOMContentLoaded', function() {
         showPasswordResetForm(resetToken);
         return; // Exit early, don't load normal app
     }
-
-    document.addEventListener('DOMContentLoaded', function() {
-    // Check for password reset token in URL FIRST
-    const urlParams = new URLSearchParams(window.location.search);
-    const resetToken = urlParams.get('reset');
-    
-    if (resetToken) {
-        // Show password reset form instead of normal login
-        showPasswordResetForm(resetToken);
-        return; // Exit early, don't load normal app
-    }
-    
-    // Check for payment success
-  //  const paymentSuccess = urlParams.get('payment');
-  //  if (paymentSuccess === 'success') {
-  //      const amount = urlParams.get('amount');
-  //      const sessionId = urlParams.get('session_id');
-  //      handlePaymentSuccess(amount, sessionId);
-  //      return;
-  //  }
     
     // Normal app initialization (existing code)
     const savedUser = localStorage.getItem('brs_user');
@@ -847,173 +782,55 @@ function updatePasswordFromReset(token) {
     window.location.href = window.location.origin;
 }
 
-     function viewAllUsers() {
+        function viewAllUsers() {
     const users = mockDB.users.filter(function(u) { return !u.isAdmin; });
+    let userList = 'Registered Users:\n\n';
     
     if (users.length === 0) {
         alert('No users have registered yet.');
         return;
     }
     
-    // Create user management modal instead of simple alert
-    showUserManagementModal(users);
-}
-
-function showUserManagementModal(users) {
-    // Create modal HTML
-    const modalHTML = `
-        <div id="userManagementModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div class="relative top-20 mx-auto p-5 border w-4/5 max-w-4xl shadow-lg rounded-md bg-white">
-                <div class="mt-3">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-medium text-gray-900">User Management</h3>
-                        <button onclick="closeUserManagementModal()" class="text-gray-500 hover:text-gray-700">&times;</button>
-                    </div>
-                    
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full bg-white border border-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-2 text-left">Email</th>
-                                    <th class="px-4 py-2 text-left">Type</th>
-                                    <th class="px-4 py-2 text-left">Credits/Days</th>
-                                    <th class="px-4 py-2 text-left">Status</th>
-                                    <th class="px-4 py-2 text-left">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${users.map(user => `
-                                    <tr class="border-t">
-                                        <td class="px-4 py-2">${user.email}</td>
-                                        <td class="px-4 py-2">${user.userType}</td>
-                                        <td class="px-4 py-2">
-                                            ${user.userType === 'credits' ? user.credits + ' credits' : 
-                                              (user.accessExpiry ? calculateDaysRemaining(user.accessExpiry) + ' days' : 'N/A')}
-                                        </td>
-                                        <td class="px-4 py-2">
-                                            <span class="px-2 py-1 rounded text-xs ${user.suspended ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
-                                                ${user.suspended ? 'Suspended' : 'Active'}
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-2">
-                                            <div class="flex space-x-2">
-                                                ${user.suspended ? 
-                                                    `<button onclick="unsuspendUser('${user.id}')" class="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Unsuspend</button>` :
-                                                    `<button onclick="suspendUser('${user.id}')" class="px-2 py-1 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700">Suspend</button>`
-                                                }
-                                                <button onclick="deleteUser('${user.id}')" class="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">Delete</button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+    users.forEach(function(user) {
+        userList += 'Email: ' + user.email + '\n';
+        userList += 'Type: ' + user.userType + '\n';
+        userList += 'Credits: ' + user.credits + '\n';
+        userList += 'Created: ' + formatDate(user.createdAt) + '\n\n';
+    });
     
-    // Add modal to page
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-function closeUserManagementModal() {
-    const modal = document.getElementById('userManagementModal');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-function suspendUser(userId) {
-    if (confirm('Are you sure you want to suspend this user? They will not be able to login.')) {
-        const user = mockDB.users.find(u => u.id === userId);
-        if (user) {
-            user.suspended = true;
-            saveToStorage();
-            alert('User suspended successfully.');
-            closeUserManagementModal();
-            viewAllUsers(); // Refresh the list
-        }
-    }
-}
-
-function unsuspendUser(userId) {
-    if (confirm('Are you sure you want to unsuspend this user?')) {
-        const user = mockDB.users.find(u => u.id === userId);
-        if (user) {
-            user.suspended = false;
-            saveToStorage();
-            alert('User unsuspended successfully.');
-            closeUserManagementModal();
-            viewAllUsers(); // Refresh the list
-        }
-    }
-}
-
-function deleteUser(userId) {
-    if (confirm('Are you sure you want to PERMANENTLY DELETE this user? This cannot be undone.')) {
-        if (confirm('This will permanently delete all user data. Are you absolutely sure?')) {
-            // Remove user from database
-            mockDB.users = mockDB.users.filter(u => u.id !== userId);
-            // Remove user's submissions
-            mockDB.submissions = mockDB.submissions.filter(s => s.userId !== userId);
-            saveToStorage();
-            updateAdminSection();
-            alert('User deleted permanently.');
-            closeUserManagementModal();
-            viewAllUsers(); // Refresh the list
-        }
-    }
+    alert(userList);
 }
         
-   async function sendPasswordReset() {
-    const email = document.getElementById('resetEmail').value;
-    if (!email) {
-        alert('Please enter your email address');
-        return;
-    }
-    
-    // Check rate limiting
-    const rateCheck = isRateLimited(email, 'reset');
-    if (rateCheck.limited) {
-        alert('Too many password reset attempts. Please try again in ' + rateCheck.timeLeft + ' minutes.');
-        return;
-    }
+        async function sendPasswordReset() {
+            const email = document.getElementById('resetEmail').value;
+            if (!email) {
+                alert('Please enter your email address');
+                return;
+            }
 
-    const user = mockDB.users.find(function(u) { return u.email === email; });
-    if (!user) {
-        recordAttempt(email, 'reset', false);
-        alert('No account found with that email address');
-        return;
-    }
-    
-    // Check if user is suspended
-    if (user.suspended) {
-        recordAttempt(email, 'reset', false);
-        alert('Your account has been suspended. Please contact support for assistance.');
-        return;
-    }
+            const user = mockDB.users.find(function(u) { return u.email === email; });
+            if (!user) {
+                alert('No account found with that email address');
+                return;
+            }
 
-    const resetToken = Math.random().toString(36).substr(2, 15);
-    
-    try {
-        await emailjs.send('service_z3nppt7', 'template_40v3r7i', {
-            to_email: email,
-            email: email,
-            reset_link: window.location.origin + '?reset=' + resetToken,
-            user_name: email
-        });
+            const resetToken = Math.random().toString(36).substr(2, 15);
+            
+            try {
+             await emailjs.send('service_z3nppt7', 'template_40v3r7i', {
+    to_email: email,
+    email: email,
+    reset_link: window.location.origin + '?reset=' + resetToken,
+    user_name: email
+});
 
-        recordAttempt(email, 'reset', true);
-        alert('Password reset link sent to your email!');
-        hidePasswordReset();
-    } catch (error) {
-        recordAttempt(email, 'reset', false);
-        console.error('Email sending failed:', error);
-        alert('Failed to send reset email. Please try again.');
-    }
-}
+                alert('Password reset link sent to your email!');
+                hidePasswordReset();
+            } catch (error) {
+                console.error('Email sending failed:', error);
+                alert('Failed to send reset email. Please try again.');
+            }
+        }
 
         async function handleAuth() {
             const email = document.getElementById('authEmail').value;
@@ -1049,43 +866,24 @@ function deleteUser(userId) {
             }
         }
 
-      async function login(email, password) {
-    // Check rate limiting first
-    const rateCheck = isRateLimited(email, 'login');
-    if (rateCheck.limited) {
-        alert('Too many login attempts. Please try again in ' + rateCheck.timeLeft + ' minutes.');
-        return;
-    }
-    
-    setLoading(true);
-    
-    const hashedPassword = hashPassword(password);
-    const user = mockDB.users.find(function(u) { 
-        return u.email === email && u.password === hashedPassword; 
-    });
-    
-    if (!user) {
-        recordAttempt(email, 'login', false);
-        alert('Invalid email or password');
-        setLoading(false);
-        return;
-    }
-    
-    // Check if user is suspended
-    if (user.suspended) {
-        recordAttempt(email, 'login', false);
-        alert('Your account has been suspended. Please contact support.');
-        setLoading(false);
-        return;
-    }
-    
-    // Successful login
-    recordAttempt(email, 'login', true);
-    currentUser = user;
-    saveToStorage();
-    showApp();
-    setLoading(false);
-}
+        async function login(email, password) {
+            setLoading(true);
+            
+            const hashedPassword = hashPassword(password);
+            const user = mockDB.users.find(function(u) { 
+                return u.email === email && u.password === hashedPassword; 
+            });
+            
+            if (user) {
+                currentUser = user;
+                saveToStorage();
+                showApp();
+            } else {
+                alert('Invalid email or password');
+            }
+            
+            setLoading(false);
+        }
 
         async function register(email, password, studentCode) {
             setLoading(true);
@@ -1145,17 +943,12 @@ function deleteUser(userId) {
             }
         }
 
-      function showApp() {
-    document.getElementById('authSection').classList.add('hidden');
-    document.getElementById('appSection').classList.remove('hidden');
-    
-    // Force reset all admin sections when switching users
-    document.getElementById('adminSettings').classList.add('hidden');
-    document.getElementById('adminUserPayment').classList.add('hidden');
-    
-    showSection('logline');
-    updateUI();
-}
+        function showApp() {
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('appSection').classList.remove('hidden');
+            showSection('logline');
+            updateUI();
+        }
 
         function showSection(section) {
             document.getElementById('loglineSection').classList.add('hidden');
@@ -1346,90 +1139,47 @@ function deleteUser(userId) {
             showSection('logline');
         }
 
-  // Purchase Functions
-function updatePurchaseSection() {
-    const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
-    const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
-    
-    if (isBeta) {
-        document.getElementById('betaDiscount').classList.remove('hidden');
-        document.getElementById('price25').textContent = '$15';
-        document.getElementById('price50').textContent = '$28';
-        document.getElementById('price100').textContent = '$50';
-    } else {
-        document.getElementById('betaDiscount').classList.add('hidden');
-        document.getElementById('price25').textContent = '$30';
-        document.getElementById('price50').textContent = '$55';
-        document.getElementById('price100').textContent = '$100';
-    }
-}
-
-async function purchaseCredits(amount) {
-    const prices = { 25: 30, 50: 55, 100: 100 };
-    const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
-    const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
-    const finalPrice = isBeta ? prices[amount] / 2 : prices[amount];
-
-    try {
-        const response = await fetch('/.netlify/functions/create-payment', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                amount: amount,
-                price: finalPrice,
-                userEmail: currentUser.email,
-                userId: currentUser.id,
-                isBeta: isBeta
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('Payment setup failed');
+        // Purchase Functions
+        function updatePurchaseSection() {
+            const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
+            const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
+            
+            if (isBeta) {
+                document.getElementById('betaDiscount').classList.remove('hidden');
+                document.getElementById('price25').textContent = '$15';
+                document.getElementById('price50').textContent = '$28';
+                document.getElementById('price100').textContent = '$50';
+            } else {
+                document.getElementById('betaDiscount').classList.add('hidden');
+                document.getElementById('price25').textContent = '$30';
+                document.getElementById('price50').textContent = '$55';
+                document.getElementById('price100').textContent = '$100';
+            }
         }
 
-        const session = await response.json();
-        
-        const result = await stripe.redirectToCheckout({
-            sessionId: session.id
-        });
+        function purchaseCredits(amount) {
+            const prices = { 25: 30, 50: 55, 100: 100 };
+            const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
+            const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
+            const finalPrice = isBeta ? prices[amount] / 2 : prices[amount];
 
-        if (result.error) {
-            alert('Payment failed: ' + (result.error.message || 'Unknown error'));
+            const discountText = isBeta ? ' (50% Beta Tester Discount!)' : '';
+            const message = 'Purchase ' + amount + ' credits for $'  + finalPrice + '?' + discountText;
+            
+            if (confirm(message)) {
+                currentUser.credits += amount;
+                
+                const userIndex = mockDB.users.findIndex(function(u) { return u.id === currentUser.id; });
+                if (userIndex !== -1) {
+                    mockDB.users[userIndex] = currentUser;
+                }
+                
+                saveToStorage();
+                updateUI();
+                updatePurchaseSection();
+                alert('Successfully purchased ' + amount + ' credits!');
+            }
         }
-
-    } catch (error) {
-        console.error('Payment error:', error);
-        alert('Payment failed. Please try again.');
-    }
-}
-
-/*
-    function handlePaymentSuccess(amount, sessionId) {
-    const savedDB = localStorage.getItem('brs_db');
-    if (savedDB) {
-        mockDB = JSON.parse(savedDB);
-    }
-    
-    const savedUser = localStorage.getItem('brs_user');
-    if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-        
-        currentUser.credits += parseInt(amount);
-        
-        const userIndex = mockDB.users.findIndex(function(u) { return u.id === currentUser.id; });
-        if (userIndex !== -1) {
-            mockDB.users[userIndex] = currentUser;
-        }
-        
-        saveToStorage();
-        
-        alert('Payment successful! ' + amount + ' credits have been added to your account.');
-        showApp();
-    }
-}
-*/
 
         // Simplified placeholder functions
         function loadHistory() {
@@ -1488,26 +1238,23 @@ async function purchaseCredits(amount) {
         }
 
         function logout() {
-    // Clear all admin sections before logging out
-    document.getElementById('adminSettings').classList.add('hidden');
-    document.getElementById('adminUserPayment').classList.add('hidden');
-    
-  localStorage.removeItem('brs_user');
-    currentUser = null;
-    currentView = 'login';
-    currentEvaluation = null;
-    
-    document.getElementById('appSection').classList.add('hidden');
-    document.getElementById('authSection').classList.remove('hidden');
-    
-    document.getElementById('authEmail').value = '';
-    document.getElementById('authPassword').value = '';
-    document.getElementById('confirmPassword').value = '';
-    document.getElementById('studentCode').value = '';
-    
-    if (currentView !== 'login') {
-        toggleAuthMode();
-    }
+            localStorage.removeItem('brs_user');
+            currentUser = null;
+            currentView = 'login';
+            currentEvaluation = null;
+            
+            document.getElementById('appSection').classList.add('hidden');
+            document.getElementById('authSection').classList.remove('hidden');
+            
+            document.getElementById('authEmail').value = '';
+            document.getElementById('authPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('studentCode').value = '';
+            
+            if (currentView !== 'login') {
+                toggleAuthMode();
+            }
+        }
     </script>
 </body>
 </html>
