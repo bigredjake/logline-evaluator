@@ -1346,32 +1346,31 @@ function deleteUser(userId) {
             showSection('logline');
         }
 
-        // Purchase Functions
-        function updatePurchaseSection() {
-            const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
-            const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
-            
-            if (isBeta) {
-                document.getElementById('betaDiscount').classList.remove('hidden');
-                document.getElementById('price25').textContent = '$15';
-                document.getElementById('price50').textContent = '$28';
-                document.getElementById('price100').textContent = '$50';
-            } else {
-                document.getElementById('betaDiscount').classList.add('hidden');
-                document.getElementById('price25').textContent = '$30';
-                document.getElementById('price50').textContent = '$55';
-                document.getElementById('price100').textContent = '$100';
-            }
-        }
+  // Purchase Functions
+function updatePurchaseSection() {
+    const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
+    const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
+    
+    if (isBeta) {
+        document.getElementById('betaDiscount').classList.remove('hidden');
+        document.getElementById('price25').textContent = '$15';
+        document.getElementById('price50').textContent = '$28';
+        document.getElementById('price100').textContent = '$50';
+    } else {
+        document.getElementById('betaDiscount').classList.add('hidden');
+        document.getElementById('price25').textContent = '$30';
+        document.getElementById('price50').textContent = '$55';
+        document.getElementById('price100').textContent = '$100';
+    }
+}
 
-     async function purchaseCredits(amount) {
+async function purchaseCredits(amount) {
     const prices = { 25: 30, 50: 55, 100: 100 };
     const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
     const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
     const finalPrice = isBeta ? prices[amount] / 2 : prices[amount];
 
     try {
-        // Create Stripe checkout session
         const response = await fetch('/.netlify/functions/create-payment', {
             method: 'POST',
             headers: {
@@ -1392,13 +1391,12 @@ function deleteUser(userId) {
 
         const session = await response.json();
         
-        // Redirect to Stripe checkout
         const result = await stripe.redirectToCheckout({
             sessionId: session.id
         });
 
         if (result.error) {
-            alert('Payment failed: ' + result.error.message);
+            alert('Payment failed: ' + (result.error.message || 'Unknown error'));
         }
 
     } catch (error) {
@@ -1406,8 +1404,8 @@ function deleteUser(userId) {
         alert('Payment failed. Please try again.');
     }
 }
-    function handlePaymentSuccess(amount, sessionId) {
-    // Add credits to user account
+
+function handlePaymentSuccess(amount, sessionId) {
     const savedDB = localStorage.getItem('brs_db');
     if (savedDB) {
         mockDB = JSON.parse(savedDB);
@@ -1417,10 +1415,8 @@ function deleteUser(userId) {
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
         
-        // Add purchased credits
         currentUser.credits += parseInt(amount);
         
-        // Update user in database
         const userIndex = mockDB.users.findIndex(function(u) { return u.id === currentUser.id; });
         if (userIndex !== -1) {
             mockDB.users[userIndex] = currentUser;
@@ -1428,7 +1424,6 @@ function deleteUser(userId) {
         
         saveToStorage();
         
-        // Show success message and redirect to app
         alert('Payment successful! ' + amount + ' credits have been added to your account.');
         showApp();
     }
