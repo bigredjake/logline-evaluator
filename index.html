@@ -956,11 +956,26 @@ function updatePasswordFromReset(token) {
         }
 
         function showApp() {
-            document.getElementById('authSection').classList.add('hidden');
-            document.getElementById('appSection').classList.remove('hidden');
-            showSection('logline');
-            updateUI();
-        }
+    document.getElementById('authSection').classList.add('hidden');
+    document.getElementById('appSection').classList.remove('hidden');
+    
+    // Check if user should be redirected to purchase page
+    if (shouldRedirectToPurchase()) {
+        showSection('purchase');
+        // Show a welcome message for new users or low credit warning
+        setTimeout(function() {
+            if (isNewUser()) {
+                alert('Welcome! To get started, you\'ll need to purchase some credits to evaluate your loglines.');
+            } else {
+                alert('You\'re out of credits! Purchase more to continue using the logline evaluator.');
+            }
+        }, 500);
+    } else {
+        showSection('logline');
+    }
+    
+    updateUI();
+}
 
         function showSection(section) {
             document.getElementById('loglineSection').classList.add('hidden');
@@ -1053,11 +1068,11 @@ function updatePasswordFromReset(token) {
                 return;
             }
 
-            if (currentUser.userType === 'credits' && currentUser.credits <= 0) {
-                alert('You have no credits remaining. Please purchase more credits to continue.');
-                showSection('purchase');
-                return;
-            }
+           if (currentUser.userType === 'credits' && currentUser.credits <= 0) {
+    showSection('purchase');
+    alert('You have no credits remaining. Please purchase more credits to continue.');
+    return;
+}
 
             if (currentUser.userType === 'student' && new Date(currentUser.accessExpiry) < new Date()) {
                 alert('Your student access has expired. Please purchase credits to continue.');
@@ -1409,6 +1424,19 @@ function updatePasswordFromReset(token) {
             const cleanUrl = window.location.origin;
             window.location.href = cleanUrl;
         }
+        function shouldRedirectToPurchase() {
+    // Only redirect credits users with 0 credits
+    if (currentUser.userType === 'credits' && currentUser.credits <= 0) {
+        return true;
+    }
+    return false;
+}
+
+function isNewUser() {
+    // Check if user has ever made a submission
+    const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id);
+    return userSubmissions.length === 0;
+}
     </script>
 </body>
 </html>
