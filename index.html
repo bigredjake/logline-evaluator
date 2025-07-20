@@ -1663,13 +1663,87 @@ if (hashedCurrentPassword !== currentUser.password) {
             alert('Generated ' + quantity + ' codes for ' + months + ' months each!\n\nCodes: ' + newCodes.map(function(c) { return c.code; }).join(', '));
         }
 
-        function downloadCodes() {
-            alert('Codes download feature would generate CSV file');
-        }
+       function downloadCodes() {
+    if (mockDB.studentCodes.length === 0) {
+        alert('No student codes available to download');
+        return;
+    }
+
+    // Create CSV content
+    const headers = ['Code', 'Months', 'Created Date', 'Status', 'Used By', 'Used Date'];
+    const csvContent = [
+        headers.join(','),
+        ...mockDB.studentCodes.map(code => [
+            code.code,
+            code.months,
+            formatDate(code.createdAt),
+            code.used ? 'Used' : 'Available',
+            code.usedBy || '',
+            code.usedAt ? formatDate(code.usedAt) : ''
+        ].join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `student_codes_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 
         function downloadAllSubmissions() {
-            alert('Submissions download feature would generate CSV file');
-        }
+    if (mockDB.submissions.length === 0) {
+        alert('No submissions available to download');
+        return;
+    }
+
+    // Create CSV content
+    const headers = [
+        'Submission ID',
+        'User Email', 
+        'Date',
+        'Genre',
+        'Tone',
+        'Protagonist',
+        'Antagonist',
+        'Setup/Inciting Incident',
+        'Story Details',
+        'Original Logline',
+        'Evaluation Response'
+    ];
+    
+    const csvContent = [
+        headers.join(','),
+        ...mockDB.submissions.map(submission => [
+            submission.id,
+            `"${submission.userEmail}"`,
+            formatDate(submission.timestamp),
+            `"${submission.formData.genre}"`,
+            `"${submission.formData.tone}"`,
+            `"${submission.formData.mainCharacter.replace(/"/g, '""')}"`,
+            `"${submission.formData.antagonist.replace(/"/g, '""')}"`,
+            `"${submission.formData.incitingIncident.replace(/"/g, '""')}"`,
+            `"${submission.formData.storyDetails.replace(/"/g, '""')}"`,
+            `"${submission.formData.logline.replace(/"/g, '""')}"`,
+            `"${submission.claudeResponse.replace(/"/g, '""').substring(0, 1000)}..."` // Truncate long responses
+        ].join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `all_submissions_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 
         function logout() {
             localStorage.removeItem('brs_user');
