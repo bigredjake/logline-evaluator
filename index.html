@@ -1523,12 +1523,16 @@ function toggleShowAllHistory() {
         return;
     }
 
-    // Check current password
-    const hashedCurrentPassword = hashPassword(currentPassword);
-    if (hashedCurrentPassword !== currentUser.password) {
-        alert('Current password is incorrect');
-        return;
-    }
+   // Check current password (with debugging)
+const hashedCurrentPassword = hashPassword(currentPassword);
+console.log('Entered current password:', currentPassword);
+console.log('Hashed entered password:', hashedCurrentPassword);
+console.log('Stored user password:', currentUser.password);
+
+if (hashedCurrentPassword !== currentUser.password) {
+    alert('Current password is incorrect');
+    return;
+}
 
     // Check new password confirmation
     if (newPassword !== confirmNewPassword) {
