@@ -1512,9 +1512,59 @@ function toggleShowAllHistory() {
             alert('Email updated successfully!');
         }
 
-        function updatePassword() {
-            alert('Password updated successfully!');
-        }
+       function updatePassword() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+    // Validation
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+        alert('Please fill in all password fields');
+        return;
+    }
+
+    // Check current password
+    const hashedCurrentPassword = hashPassword(currentPassword);
+    if (hashedCurrentPassword !== currentUser.password) {
+        alert('Current password is incorrect');
+        return;
+    }
+
+    // Check new password confirmation
+    if (newPassword !== confirmNewPassword) {
+        alert('New passwords do not match');
+        return;
+    }
+
+    // Validate new password strength
+    if (!validatePassword(newPassword)) {
+        alert('New password does not meet requirements: 8+ characters, uppercase, lowercase, number, special character');
+        return;
+    }
+
+    // Update password
+    const newHashedPassword = hashPassword(newPassword);
+    currentUser.password = newHashedPassword;
+
+    // Update in database
+    const userIndex = mockDB.users.findIndex(u => u.id === currentUser.id);
+    if (userIndex !== -1) {
+        mockDB.users[userIndex].password = newHashedPassword;
+    }
+
+    // Save to storage
+    saveToStorage();
+
+    // Clear form fields
+    document.getElementById('currentPassword').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmNewPassword').value = '';
+
+    // Hide password strength indicator
+    document.getElementById('newPasswordStrength').classList.add('hidden');
+
+    alert('Password updated successfully!');
+}
 
       async function managePayment() {
     console.log('managePayment() called');
