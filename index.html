@@ -1279,14 +1279,88 @@ if (currentUser.isAdmin === true) {
     }
 }
 
-        // Simplified placeholder functions
         function loadHistory() {
-            document.getElementById('noHistory').classList.remove('hidden');
-        }
+    const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id);
+    
+    if (userSubmissions.length === 0) {
+        document.getElementById('noHistory').classList.remove('hidden');
+        document.getElementById('historyList').innerHTML = '';
+        return;
+    }
+    
+    document.getElementById('noHistory').classList.add('hidden');
+    
+    // Sort submissions by date (newest first)
+    const sortedSubmissions = userSubmissions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    // Apply pagination
+    const totalItems = sortedSubmissions.length;
+    const totalPages = Math.ceil(totalItems / historyPerPage);
+    const startIndex = (currentHistoryPage - 1) * historyPerPage;
+    const endIndex = startIndex + historyPerPage;
+    const pageSubmissions = showAllHistory ? sortedSubmissions : sortedSubmissions.slice(startIndex, endIndex);
+    
+    // Generate history list HTML
+    const historyHTML = pageSubmissions.map(submission => {
+        const date = new Date(submission.timestamp).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        return `
+            <div class="history-item border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                 onclick="viewHistoryItem('${submission.id}')">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex-1">
+                        <h3 class="font-medium text-gray-900 mb-1">
+                            ${truncateLogline(submission.formData.logline, 80)}
+                        </h3>
+                        <p class="text-sm text-gray-600">
+                            <span class="font-medium">Genre:</span> ${submission.formData.genre} | 
+                            <span class="font-medium">Tone:</span> ${submission.formData.tone}
+                        </p>
+                    </div>
+                    <div class="text-right ml-4">
+                        <p class="text-sm text-gray-500">${date}</p>
+                        <div class="flex space-x-2 mt-1">
+                            <button onclick="event.stopPropagation(); downloadHistoryPDF('${submission.id}')" 
+                                    class="text-blue-600 hover:text-blue-800 text-xs">
+                                PDF
+                            </button>
+                            <button onclick="event.stopPropagation(); deleteHistoryItem('${submission.id}')" 
+                                    class="text-red-600 hover:text-red-800 text-xs">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-700 line-clamp-2">
+                    ${truncateLogline(submission.claudeResponse, 150)}
+                </p>
+            </div>
+        `;
+    }).join('');
+    
+    document.getElementById('historyList').innerHTML = historyHTML;
+    
+    // Update pagination
+    if (!showAllHistory && totalPages > 1) {
+        updateHistoryPagination(totalPages);
+    } else {
+        document.getElementById('historyPagination').innerHTML = '';
+    }
+}
 
-        function toggleShowAllHistory() {
-            // Placeholder
-        }
+function toggleShowAllHistory() {
+    showAllHistory = !showAllHistory;
+    currentHistoryPage = 1;
+    const button = document.getElementById('showAllHistoryBtn');
+    button.textContent = showAllHistory ? 'Show Paginated' : 'Show All';
+    loadHistory();
+}
 
        function downloadEvaluationPDF() {
     if (!currentEvaluation) {
@@ -1718,6 +1792,106 @@ function deleteUser(userId) {
         
         alert('User deleted successfully.');
     }
+}
+        function viewHistoryItem(submissionId) {
+    const submission = mockDB.submissions.find(s => s.id === submissionId);
+    if (!submission) {
+        alert('Evaluation not found');
+        return;
+    }
+    
+    // Set this as the current evaluation
+    currentEvaluation = submission;
+    
+    // Populate the results section
+    document.getElementById('originalLogline').textContent = '"' + submission.formData.logline + '"';
+    document.getElementById('evaluationResult').textContent = submission.claudeResponse;
+    
+    // Show the results section
+    showSection('results');
+}
+
+function downloadHistoryPDF(submissionId) {
+    const submission = mockDB.submissions.find(s => s.id === submissionId);
+    if (!submission) {
+        alert('Evaluation not found');
+        return;
+    }
+    
+    // Temporarily set as current evaluation for PDF generation
+    const originalEvaluation = currentEvaluation;
+    currentEvaluation = submission;
+    
+    // Generate PDF
+    downloadEvaluationPDF();
+    
+    // Restore original evaluation
+    currentEvaluation = originalEvaluation;
+}
+
+function deleteHistoryItem(submissionId) {
+    if (!confirm('Are you sure you want to delete this evaluation? This action cannot be undone.')) {
+        return;
+    }
+    
+    const submissionIndex = mockDB.submissions.findIndex(s => s.id === submissionId);
+    if (submissionIndex !== -1) {
+        mockDB.submissions.splice(submissionIndex, 1);
+        saveToStorage();
+        loadHistory(); // Refresh the history display
+        updateAdminSection(); // Update admin counts if admin
+        alert('Evaluation deleted successfully');
+    }
+}
+
+function updateHistoryPagination(totalPages) {
+    const paginationHTML = [];
+    
+    // Previous button
+    if (currentHistoryPage > 1) {
+        paginationHTML.push(`
+            <button onclick="changeHistoryPage(${currentHistoryPage - 1})" 
+                    class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                Previous
+            </button>
+        `);
+    }
+    
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+        const isActive = i === currentHistoryPage;
+        paginationHTML.push(`
+            <button onclick="changeHistoryPage(${i})" 
+                    class="px-3 py-1 ${isActive ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'} rounded hover:${isActive ? 'bg-red-700' : 'bg-gray-300'}">
+                ${i}
+            </button>
+        `);
+    }
+    
+    // Next button
+    if (currentHistoryPage < totalPages) {
+        paginationHTML.push(`
+            <button onclick="changeHistoryPage(${currentHistoryPage + 1})" 
+                    class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                Next
+            </button>
+        `);
+    }
+    
+    document.getElementById('historyPagination').innerHTML = paginationHTML.join('');
+}
+
+function changeHistoryPage(page) {
+    currentHistoryPage = page;
+    loadHistory();
+}
+
+function toggleShowAllHistory() {
+    showAllHistory = !showAllHistory;
+    currentHistoryPage = 1;
+    const button = document.getElementById('showAllHistoryBtn');
+    button.textContent = showAllHistory ? 'Show Paginated' : 'Show All';
+    loadHistory();
 }
     </script>
 </body>
