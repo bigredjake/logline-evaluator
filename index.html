@@ -794,23 +794,48 @@ function updatePasswordFromReset(token) {
     window.location.href = window.location.origin;
 }
 
-        function viewAllUsers() {
-    const users = mockDB.users.filter(function(u) { return !u.isAdmin; });
-    let userList = 'Registered Users:\n\n';
+       function viewAllUsers() {
+    const users = mockDB.users.filter(u => !u.isAdmin);
     
     if (users.length === 0) {
         alert('No users have registered yet.');
         return;
     }
     
-    users.forEach(function(user) {
-        userList += 'Email: ' + user.email + '\n';
-        userList += 'Type: ' + user.userType + '\n';
-        userList += 'Credits: ' + user.credits + '\n';
-        userList += 'Created: ' + formatDate(user.createdAt) + '\n\n';
-    });
-    
-    alert(userList);
+    // Create user management modal
+    document.body.insertAdjacentHTML('beforeend', `
+        <div id="userManagementModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div class="relative top-8 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+                <div class="mt-3">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">User Management</h3>
+                        <button onclick="closeUserManagement()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Credits</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTableBody" class="bg-white divide-y divide-gray-200">
+                                ${users.map(user => createUserRow(user)).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `);
 }
         
         async function sendPasswordReset() {
@@ -820,11 +845,22 @@ function updatePasswordFromReset(token) {
                 return;
             }
 
-            const user = mockDB.users.find(function(u) { return u.email === email; });
-            if (!user) {
-                alert('No account found with that email address');
-                return;
-            }
+          const user = mockDB.users.find(function(u) { return u.email === email; });
+if (!user) {
+    alert('No account found with that email address');
+    return;
+}
+
+// Check if user is suspended or deleted
+const status = user.status || 'active';
+if (status === 'suspended') {
+    alert('Your account has been suspended. Please contact support.');
+    return;
+}
+if (status === 'deleted') {
+    alert('This account no longer exists. Please contact support.');
+    return;
+}
 
             const resetToken = Math.random().toString(36).substr(2, 15);
             
@@ -879,23 +915,36 @@ function updatePasswordFromReset(token) {
         }
 
         async function login(email, password) {
-            setLoading(true);
-            
-            const hashedPassword = hashPassword(password);
-            const user = mockDB.users.find(function(u) { 
-                return u.email === email && u.password === hashedPassword; 
-            });
-            
-            if (user) {
-                currentUser = user;
-                saveToStorage();
-                showApp();
-            } else {
-                alert('Invalid email or password');
-            }
-            
+    setLoading(true);
+    
+    const hashedPassword = hashPassword(password);
+    const user = mockDB.users.find(function(u) { 
+        return u.email === email && u.password === hashedPassword; 
+    });
+    
+    if (user) {
+        // Check if user is suspended or deleted
+        const status = user.status || 'active';
+        if (status === 'suspended') {
+            alert('Your account has been suspended. Please contact support.');
             setLoading(false);
+            return;
         }
+        if (status === 'deleted') {
+            alert('This account no longer exists. Please contact support.');
+            setLoading(false);
+            return;
+        }
+        
+        currentUser = user;
+        saveToStorage();
+        showApp();
+    } else {
+        alert('Invalid email or password');
+    }
+    
+    setLoading(false);
+}
 
         async function register(email, password, studentCode) {
             setLoading(true);
@@ -1035,12 +1084,13 @@ function updatePasswordFromReset(token) {
         document.getElementById('studentDaysLeft').textContent = daysLeft;
     }
     
-    // Show admin sections ONLY if user is actually an admin
-    if (currentUser.isAdmin === true) {
-        document.getElementById('adminUserPayment').classList.remove('hidden');
-        document.getElementById('adminSettings').classList.remove('hidden');
-        updateAdminSection();
-    }
+// Show admin sections ONLY if user is actually an admin
+if (currentUser.isAdmin === true) {
+    document.getElementById('adminUserPayment').classList.remove('hidden');
+    document.getElementById('adminSettings').classList.remove('hidden');
+    updateAdminSection();
+    loadUserManagement(); // Add this new line
+}
 }
         
         function updateAdminSection() {
@@ -1436,6 +1486,106 @@ function isNewUser() {
     // Check if user has ever made a submission
     const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id);
     return userSubmissions.length === 0;
+}
+        function createUserRow(user) {
+    const status = user.status || 'active';
+    const statusColor = status === 'active' ? 'text-green-600' : status === 'suspended' ? 'text-yellow-600' : 'text-red-600';
+    const statusText = status.charAt(0).toUpperCase() + status.slice(1);
+    
+    return `
+        <tr>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.email}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.userType}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.credits}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${statusColor}">${statusText}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(user.createdAt)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                ${status === 'active' ? 
+                    `<button onclick="suspendUser('${user.id}')" class="text-yellow-600 hover:text-yellow-900">Suspend</button>` :
+                    status === 'suspended' ? 
+                    `<button onclick="unsuspendUser('${user.id}')" class="text-green-600 hover:text-green-900">Unsuspend</button>` : ''
+                }
+                ${status !== 'deleted' ? 
+                    `<button onclick="deleteUser('${user.id}')" class="text-red-600 hover:text-red-900">Delete</button>` : ''
+                }
+            </td>
+        </tr>
+    `;
+}
+
+function closeUserManagement() {
+    const modal = document.getElementById('userManagementModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function loadUserManagement() {
+    // This function can be used to initialize any user management features
+    // For now, it's just a placeholder
+}
+
+function suspendUser(userId) {
+    if (!confirm('Are you sure you want to suspend this user? They will not be able to log in.')) {
+        return;
+    }
+    
+    const userIndex = mockDB.users.findIndex(u => u.id === userId);
+    if (userIndex !== -1) {
+        mockDB.users[userIndex].status = 'suspended';
+        saveToStorage();
+        
+        // Refresh the user table
+        const tableBody = document.getElementById('userTableBody');
+        if (tableBody) {
+            const users = mockDB.users.filter(u => !u.isAdmin);
+            tableBody.innerHTML = users.map(user => createUserRow(user)).join('');
+        }
+        
+        alert('User suspended successfully.');
+    }
+}
+
+function unsuspendUser(userId) {
+    if (!confirm('Are you sure you want to unsuspend this user?')) {
+        return;
+    }
+    
+    const userIndex = mockDB.users.findIndex(u => u.id === userId);
+    if (userIndex !== -1) {
+        mockDB.users[userIndex].status = 'active';
+        saveToStorage();
+        
+        // Refresh the user table
+        const tableBody = document.getElementById('userTableBody');
+        if (tableBody) {
+            const users = mockDB.users.filter(u => !u.isAdmin);
+            tableBody.innerHTML = users.map(user => createUserRow(user)).join('');
+        }
+        
+        alert('User unsuspended successfully.');
+    }
+}
+
+function deleteUser(userId) {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+        return;
+    }
+    
+    const userIndex = mockDB.users.findIndex(u => u.id === userId);
+    if (userIndex !== -1) {
+        mockDB.users[userIndex].status = 'deleted';
+        saveToStorage();
+        
+        // Refresh the user table
+        const tableBody = document.getElementById('userTableBody');
+        if (tableBody) {
+            const users = mockDB.users.filter(u => !u.isAdmin);
+            tableBody.innerHTML = users.map(user => createUserRow(user)).join('');
+        }
+        
+        alert('User deleted successfully.');
+    }
 }
     </script>
 </body>
