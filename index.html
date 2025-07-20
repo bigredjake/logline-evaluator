@@ -1695,7 +1695,7 @@ if (hashedCurrentPassword !== currentUser.password) {
     document.body.removeChild(link);
 }
 
-        function downloadAllSubmissions() {
+       function downloadAllSubmissions() {
     if (mockDB.submissions.length === 0) {
         alert('No submissions available to download');
         return;
@@ -1719,9 +1719,9 @@ if (hashedCurrentPassword !== currentUser.password) {
     const csvContent = [
         headers.join(','),
         ...mockDB.submissions.map(submission => [
-            submission.id,
+            `"${submission.id}"`, // Add quotes to prevent scientific notation
             `"${submission.userEmail}"`,
-            formatDate(submission.timestamp),
+            `"${formatDate(submission.timestamp)}"`, // Add quotes around date
             `"${submission.formData.genre}"`,
             `"${submission.formData.tone}"`,
             `"${submission.formData.mainCharacter.replace(/"/g, '""')}"`,
@@ -1729,7 +1729,7 @@ if (hashedCurrentPassword !== currentUser.password) {
             `"${submission.formData.incitingIncident.replace(/"/g, '""')}"`,
             `"${submission.formData.storyDetails.replace(/"/g, '""')}"`,
             `"${submission.formData.logline.replace(/"/g, '""')}"`,
-            `"${submission.claudeResponse.replace(/"/g, '""').substring(0, 1000)}..."` // Truncate long responses
+            `"${submission.claudeResponse.replace(/"/g, '""')}"` // Remove truncation, keep full response
         ].join(','))
     ].join('\n');
 
