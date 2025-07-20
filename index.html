@@ -423,45 +423,43 @@
                     <h2 class="text-3xl font-bold text-black mb-6">Purchase Credits</h2>
                     <p class="text-gray-600 mb-8">Choose a credit package to evaluate your loglines</p>
 
-                    <div id="betaDiscount" class="hidden bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                        <h3 class="text-green-800 font-semibold">🎉 Beta Tester Discount!</h3>
-                        <p class="text-green-700">Get 50% off your first purchase as an early supporter!</p>
-                    </div>
+                 <div id="betaDiscount" class="hidden bg-green-50 border border-green-200 rounded-lg p-4 mb-6 text-center">
+    <h3 class="text-green-800 font-bold text-lg">🎉 Beta Adopter Discount!</h3>
+    <p class="text-green-700 text-base font-medium">Get 50% off your first purchase as an early adopter!</p>
+</div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="border border-gray-200 rounded-lg p-6 text-center">
-                            <h3 class="text-xl font-bold mb-2">Starter Pack</h3>
-                            <div class="text-3xl font-bold text-red-600 mb-2" id="price25">$30</div>
-                            <div class="text-gray-600 mb-4">25 Evaluations</div>
-                            <button onclick="purchaseCredits(25)" class="w-full py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                                    style="background-color: #d9042b;">
-                                Purchase
-                            </button>
-                        </div>
-
-                        <div class="border-2 border-red-600 rounded-lg p-6 text-center relative">
-                            <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-3 py-1 rounded-full text-sm">
-                                Best Value
-                            </div>
-                            <h3 class="text-xl font-bold mb-2">Pro Pack</h3>
-                            <div class="text-3xl font-bold text-red-600 mb-2" id="price50">$55</div>
-                            <div class="text-gray-600 mb-4">50 Evaluations</div>
-                            <button onclick="purchaseCredits(50)" class="w-full py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                                    style="background-color: #d9042b;">
-                                Purchase
-                            </button>
-                        </div>
-
-                        <div class="border border-gray-200 rounded-lg p-6 text-center">
-                            <h3 class="text-xl font-bold mb-2">Writer Pack</h3>
-                            <div class="text-3xl font-bold text-red-600 mb-2" id="price100">$100</div>
-                            <div class="text-gray-600 mb-4">100 Evaluations</div>
-                            <button onclick="purchaseCredits(100)" class="w-full py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                                    style="background-color: #d9042b;">
-                                Purchase
-                            </button>
-                        </div>
-                    </div>
+    <div class="border border-gray-200 rounded-lg p-6 text-center">
+        <h3 class="text-xl font-bold mb-2">Starter Pack</h3>
+        <div class="text-3xl font-bold text-red-600 mb-2" id="price25">$30</div>
+        <div class="text-gray-600 mb-4">20 Evaluations</div>
+        <button onclick="purchaseCredits(20)" class="w-full py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                style="background-color: #d9042b;">
+            Purchase
+        </button>
+    </div>
+    <div class="border-2 border-red-600 rounded-lg p-6 text-center relative">
+        <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-3 py-1 rounded-full text-sm">
+            Popular Choice
+        </div>
+        <h3 class="text-xl font-bold mb-2">Pro Pack</h3>
+        <div class="text-3xl font-bold text-red-600 mb-2" id="price50">$60</div>
+        <div class="text-gray-600 mb-4">50 Evaluations</div>
+        <button onclick="purchaseCredits(50)" class="w-full py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                style="background-color: #d9042b;">
+            Purchase
+        </button>
+    </div>
+    <div class="border border-gray-200 rounded-lg p-6 text-center">
+        <h3 class="text-xl font-bold mb-2">Writer Pack</h3>
+        <div class="text-3xl font-bold text-red-600 mb-2" id="price100">$100</div>
+        <div class="text-gray-600 mb-4">100 Evaluations</div>
+        <button onclick="purchaseCredits(100)" class="w-full py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                style="background-color: #d9042b;">
+            Purchase
+        </button>
+    </div>
+</div>
 
                     <div class="mt-8 text-center text-sm text-gray-500">
                         Credits never expire. Secure payment processing by Stripe.
@@ -1217,28 +1215,30 @@ if (currentUser.isAdmin === true) {
         }
 
         // Purchase Functions
-        function updatePurchaseSection() {
-            const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
-            const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
-            
-            if (isBeta) {
-                document.getElementById('betaDiscount').classList.remove('hidden');
-                document.getElementById('price25').textContent = '$15';
-                document.getElementById('price50').textContent = '$28';
-                document.getElementById('price100').textContent = '$50';
-            } else {
-                document.getElementById('betaDiscount').classList.add('hidden');
-                document.getElementById('price25').textContent = '$30';
-                document.getElementById('price50').textContent = '$55';
-                document.getElementById('price100').textContent = '$100';
-            }
-        }
+       function updatePurchaseSection() {
+    const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
+    
+    // For now, everyone gets beta pricing during the beta period
+    const isBeta = true; // Change this to false when beta period ends
+    
+    if (isBeta) {
+        document.getElementById('betaDiscount').classList.remove('hidden');
+        document.getElementById('price25').innerHTML = '<span class="line-through text-gray-400">$30</span> $15';
+        document.getElementById('price50').innerHTML = '<span class="line-through text-gray-400">$60</span> $30';
+        document.getElementById('price100').innerHTML = '<span class="line-through text-gray-400">$100</span> $50';
+    } else {
+        document.getElementById('betaDiscount').classList.add('hidden');
+        document.getElementById('price25').textContent = '$30';
+        document.getElementById('price50').textContent = '$60';
+        document.getElementById('price100').textContent = '$100';
+    }
+}
 
         async function purchaseCredits(amount) {
-    const prices = { 25: 30, 50: 55, 100: 100 };
+   const prices = { 20: 30, 50: 60, 100: 100 };
     const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id).length;
-    const isBeta = currentUser.userType === 'credits' && userSubmissions === 0;
-    const finalPrice = isBeta ? Math.floor(prices[amount] / 2) : prices[amount];
+const isBeta = true; // Change this to false when beta period ends
+const finalPrice = isBeta ? Math.floor(prices[amount] / 2) : prices[amount];
 
     try {
         // Call your Netlify function to create payment session
