@@ -589,6 +589,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // END NEW SECTION
     
+    // Check for customer portal return
+const portalReturn = urlParams.get('portal');
+if (portalReturn === 'return') {
+    // Clean the URL and show a success message
+    window.history.replaceState({}, document.title, window.location.pathname);
+    setTimeout(() => {
+        alert('Payment management completed successfully!');
+    }, 500);
+}
+    
     // Normal app initialization (existing code)
     const savedUser = localStorage.getItem('brs_user');
     const savedDB = localStorage.getItem('brs_db');
@@ -1506,9 +1516,33 @@ function toggleShowAllHistory() {
             alert('Password updated successfully!');
         }
 
-        function managePayment() {
-            alert('Payment management integration would go here (Stripe Customer Portal)');
+       async function managePayment() {
+    try {
+        const response = await fetch('/.netlify/functions/create-customer-portal', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                userEmail: currentUser.email,
+                userId: currentUser.id
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to access customer portal');
         }
+
+        // Redirect to Stripe Customer Portal
+        window.location.href = result.url;
+
+    } catch (error) {
+        console.error('Customer portal error:', error);
+        alert('Error accessing payment management. Please try again.');
+    }
+}
 
         function generateStudentCodes() {
             const quantity = parseInt(document.getElementById('codeQuantity').value) || 1;
