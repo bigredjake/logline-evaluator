@@ -1508,9 +1508,44 @@ function toggleShowAllHistory() {
     }
 }
 
-        function updateEmail() {
-            alert('Email updated successfully!');
-        }
+       function updateEmail() {
+    const newEmail = document.getElementById('newEmail').value;
+
+    // Validation
+    if (!newEmail) {
+        alert('Please enter a new email address');
+        return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+        alert('Please enter a valid email address');
+        return;
+    }
+
+    // Check if email already exists (excluding current user)
+    const existingUser = mockDB.users.find(u => u.email === newEmail && u.id !== currentUser.id);
+    if (existingUser) {
+        alert('This email address is already in use by another account');
+        return;
+    }
+
+    // Update email
+    const oldEmail = currentUser.email;
+    currentUser.email = newEmail;
+
+    // Update in database
+    const userIndex = mockDB.users.findIndex(u => u.id === currentUser.id);
+    if (userIndex !== -1) {
+        mockDB.users[userIndex].email = newEmail;
+    }
+
+    // Save to storage
+    saveToStorage();
+
+    alert(`Email updated successfully from ${oldEmail} to ${newEmail}!`);
+}
 
        function updatePassword() {
     const currentPassword = document.getElementById('currentPassword').value;
@@ -1525,9 +1560,6 @@ function toggleShowAllHistory() {
 
    // Check current password (with debugging)
 const hashedCurrentPassword = hashPassword(currentPassword);
-console.log('Entered current password:', currentPassword);
-console.log('Hashed entered password:', hashedCurrentPassword);
-console.log('Stored user password:', currentUser.password);
 
 if (hashedCurrentPassword !== currentUser.password) {
     alert('Current password is incorrect');
