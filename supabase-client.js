@@ -2,7 +2,7 @@
 // This file handles all database connections and operations
 
 // Import Supabase client library
-import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Initialize Supabase client with environment variables
 const supabaseUrl = window.location.hostname === 'localhost' 
