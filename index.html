@@ -910,19 +910,28 @@ async function updatePasswordFromReset(token) {
                 
                 let userProfile = profileResult.data;
                 
-                // Step 4: If student code was provided, update the profile
+          // Step 4: If student code was provided, update the profile
                 if (validatedCode) {
-                    // Update profile to student type with access expiry
-                    const expiry = new Date();
-                    expiry.setMonth(expiry.getMonth() + validatedCode.months);
+                    let updateData = {};
                     
-                    // Update the profile to student type
-                    const updateResult = await window.supabase
-                        .from('user_profiles')
-                        .update({
+                    if (validatedCode.code_type === 'credit_based') {
+                        // Credit-based code: add credits, keep as 'credits' type
+                        updateData = {
+                            credits: validatedCode.credits
+                        };
+                    } else {
+                        // Time-based code: set as student with expiry
+                        const expiry = new Date();
+                        expiry.setMonth(expiry.getMonth() + validatedCode.months);
+                        updateData = {
                             user_type: 'student',
                             access_expiry: expiry.toISOString()
-                        })
+                        };
+                    }
+                    
+                    const updateResult = await window.supabase
+                        .from('user_profiles')
+                        .update(updateData)
                         .eq('id', newUserId)
                         .select()
                         .single();
