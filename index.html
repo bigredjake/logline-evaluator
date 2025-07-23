@@ -912,6 +912,7 @@ async function updatePasswordFromReset(token) {
                 
           // Step 4: If student code was provided, update the profile
                 if (validatedCode) {
+                    console.log('Code type:', validatedCode.code_type, 'Credits:', validatedCode.credits);
                     let updateData = {};
                     
                     if (validatedCode.code_type === 'credit_based') {
