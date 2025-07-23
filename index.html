@@ -1655,35 +1655,6 @@ async function generateStudentCodes() {
             document.body.removeChild(link);
         }
 
-
-            // Create CSV content
-            const headers = ['Code', 'Type', 'Months', 'Credits', 'Created Date', 'Status', 'Used By', 'Used Date'];
-            const csvContent = [
-                headers.join(','),
-                ...codesResult.data.map(code => [
-                    code.code,
-                    code.code_type,
-                    code.months || '',
-                    code.credits || '',
-                    formatDate(code.created_at),
-                    code.used ? 'Used' : 'Available',
-                    code.used_by || '',
-                    code.used_at ? formatDate(code.used_at) : ''
-                ].join(','))
-            ].join('\n');
-
-            // Create and download file
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `student_codes_${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
         async function downloadAllSubmissions() {
             const submissionsResult = await window.dbHelpers.getAllSubmissions();
             
