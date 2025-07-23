@@ -857,9 +857,6 @@ async function updatePasswordFromReset(token) {
             
             try {
                 // Step 1: Validate student code first (if provided)
-                let userType = 'credits';
-                let accessExpiry = null;
-                let credits = 0;
                 let validatedCode = null;
                 
                 if (studentCode) {
@@ -869,16 +866,10 @@ async function updatePasswordFromReset(token) {
                         setLoading(false);
                         return;
                     }
-                    
-                    // Valid code found
                     validatedCode = codeResult.data;
-                    userType = 'student';
-                    const expiry = new Date();
-                    expiry.setMonth(expiry.getMonth() + validatedCode.months);
-                    accessExpiry = expiry.toISOString();
                 }
                 
-                // Step 2: Create auth user
+                // Step 2: Create auth user (trigger will automatically create profile)
                 const authResult = await window.authHelpers.signUp(email, password);
                 
                 if (!authResult.success) {
@@ -895,49 +886,73 @@ async function updatePasswordFromReset(token) {
                 }
                 
                 const newUserId = authResult.data.user.id;
-                const newUserEmail = authResult.data.user.email;
                 
-                // Step 3: Determine if user should be admin
-                const isAdmin = newUserEmail === 'jacob@bigredstripe.com';
+                // Step 3: Get the profile that was automatically created by the trigger
+                // Give it a moment to be created
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 
-                if (isAdmin) {
-                    userType = 'admin';
-                    credits = 999999;
-                    accessExpiry = null;
-                }
-                
-                // Step 4: Create user profile
-                const profileResult = await window.dbHelpers.createUserProfile(
-                    newUserId,
-                    newUserEmail,
-                    userType,
-                    isAdmin
-                );
+                const profileResult = await window.dbHelpers.getUserProfile(newUserId);
                 
                 if (!profileResult.success) {
-                    // Profile creation failed - we need to clean up the auth user
-                    console.error('Profile creation failed:', profileResult.error);
-                    
-                    // Try to delete the auth user to prevent orphaned records
+                    console.error('Profile not found after user creation:', profileResult.error);
                     await window.authHelpers.signOut();
-                    
-                    alert('Account setup failed. Please try again. Error: ' + profileResult.error);
+                    alert('Account setup failed. Please try again.');
                     setLoading(false);
                     return;
                 }
                 
-                // Step 5: If student code was used, mark it as used
-                if (validatedCode && userType === 'student') {
+                let userProfile = profileResult.data;
+                
+                // Step 4: If student code was provided, update the profile
+                if (validatedCode) {
+                    // Update profile to student type with access expiry
+                    const expiry = new Date();
+                    expiry.setMonth(expiry.getMonth() + validatedCode.months);
+                    
+                    // Update the profile to student type
+                    const updateResult = await window.supabase
+                        .from('user_profiles')
+                        .update({
+                            user_type: 'student',
+                            access_expiry: expiry.toISOString()
+                        })
+                        .eq('id', newUserId)
+                        .select()
+                        .single();
+                    
+                    if (updateResult.error) {
+                        console.error('Failed to update profile for student code:', updateResult.error);
+                        // Continue anyway - basic account is created
+                    } else {
+                        userProfile = updateResult.data;
+                    }
+                    
+                    // Mark student code as used
                     const codeUseResult = await window.dbHelpers.useStudentCode(studentCode, newUserId);
                     if (!codeUseResult.success) {
-                        // Code marking failed, but account is created - just log warning
                         console.warn('Failed to mark student code as used:', codeUseResult.error);
+                    }
+                }
+                
+                // Step 5: For admin users, make sure they have unlimited credits
+                if (userProfile.is_admin) {
+                    const adminUpdateResult = await window.supabase
+                        .from('user_profiles')
+                        .update({ credits: 999999 })
+                        .eq('id', newUserId)
+                        .select()
+                        .single();
+                    
+                    if (adminUpdateResult.error) {
+                        console.error('Failed to set admin credits:', adminUpdateResult.error);
+                    } else {
+                        userProfile = adminUpdateResult.data;
                     }
                 }
                 
                 // Step 6: Set current user data
                 currentUser = authResult.data.user;
-                currentUserProfile = profileResult.data;
+                currentUserProfile = userProfile;
                 
                 // Step 7: Success!
                 alert('Account created successfully! Welcome to the Logline Evaluator.');
