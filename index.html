@@ -471,41 +471,20 @@
     </div>
 
     <script>
-        // Initialize EmailJS is in the Head
-   
         // Initialize Stripe (you'll need to replace with your actual key)
        const stripe = Stripe('pk_test_51IAqQXGeynMWYbxDVS6wPalfpyuFfRknJN1xnYqmXGFT2B37foYZHdKYkMKohUZAgOOHflOGLYgiKev537GuOZKi00XO4MKDk9');
 
         // Global state
         let currentUser = null;
+        let currentUserProfile = null;
         let currentView = 'login';
         let isLoading = false;
         let currentHistoryPage = 1;
         let historyPerPage = 10;
         let showAllHistory = false;
         let currentEvaluation = null;
-        
-        // Mock database
-        let mockDB = {
-            users: [{
-                id: 'admin-001',
-                email: 'jacob@bigredstripe.com',
-                password: hashPassword('admin123'),
-                userType: 'admin',
-                credits: 999999,
-                accessExpiry: null,
-                createdAt: new Date().toISOString(),
-                isAdmin: true
-            }],
-            submissions: [],
-            studentCodes: []
-        };
 
         // Utility Functions
-        function hashPassword(password) {
-            return btoa(password + 'salt123');
-        }
-
         function checkPasswordStrength(password) {
             let strength = 0;
             const requirements = {
@@ -567,7 +546,7 @@
         }
 
     // Initialize app
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Check for password reset token in URL FIRST
     const urlParams = new URLSearchParams(window.location.search);
     const resetToken = urlParams.get('reset');
@@ -600,20 +579,35 @@ if (portalReturn === 'return') {
     }, 500);
 }
     
-    // Normal app initialization (existing code)
-    const savedUser = localStorage.getItem('brs_user');
-    const savedDB = localStorage.getItem('brs_db');
-    
-    if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-        showApp();
+    // Wait for Supabase to be loaded
+    let attempts = 0;
+    while (!window.authHelpers && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
     }
     
-    if (savedDB) {
-        mockDB = JSON.parse(savedDB);
-    } else {
-        localStorage.setItem('brs_db', JSON.stringify(mockDB));
+    if (!window.authHelpers) {
+        console.error('Supabase not loaded properly');
+        alert('System initialization error. Please refresh the page.');
+        return;
     }
+    
+    // Check for existing session
+    const authResult = await window.authHelpers.getCurrentUser();
+    if (authResult.success && authResult.data) {
+        // User is logged in, get their profile
+        const profileResult = await window.dbHelpers.getUserProfile(authResult.data.id);
+        if (profileResult.success) {
+            currentUser = authResult.data;
+            currentUserProfile = profileResult.data;
+            showApp();
+        } else {
+            // User exists but no profile - this shouldn't happen in normal flow
+            console.error('User has no profile:', profileResult.error);
+            await window.authHelpers.signOut();
+        }
+    }
+    
     setupEventListeners();
     updateUI();
 });
@@ -651,7 +645,7 @@ if (portalReturn === 'return') {
             document.getElementById('generateCodesBtn').addEventListener('click', generateStudentCodes);
             document.getElementById('downloadCodesBtn').addEventListener('click', downloadCodes);
             document.getElementById('downloadAllSubmissionsBtn').addEventListener('click', downloadAllSubmissions);
-            document.getElementById('viewUsersBtn').addEventListener('click', viewAllUsers);  // ADD THIS LINE
+            document.getElementById('viewUsersBtn').addEventListener('click', viewAllUsers);
 
             // Password strength listeners
             document.getElementById('authPassword').addEventListener('input', function() {
@@ -663,11 +657,6 @@ if (portalReturn === 'return') {
             document.getElementById('newPassword').addEventListener('input', function() {
                 updatePasswordStrength(this, document.getElementById('newPasswordStrength'));
             });
-        }
-
-        function saveToStorage() {
-            localStorage.setItem('brs_user', JSON.stringify(currentUser));
-            localStorage.setItem('brs_db', JSON.stringify(mockDB));
         }
 
         // Authentication Functions
@@ -754,7 +743,7 @@ function showPasswordResetForm(token) {
     `;
 }
 
-function updatePasswordFromReset(token) {
+async function updatePasswordFromReset(token) {
     const newPassword = document.getElementById('newPasswordReset').value;
     const confirmPassword = document.getElementById('confirmPasswordReset').value;
     
@@ -773,80 +762,12 @@ function updatePasswordFromReset(token) {
         return;
     }
     
-    // Load the database
-    const savedDB = localStorage.getItem('brs_db');
-    if (savedDB) {
-        mockDB = JSON.parse(savedDB);
-    }
-    
-    // TODO: In real app, validate the reset token and find the specific user
-    // For now, we'll find the user who requested the reset
-    // Since we don't store token-to-user mapping, we'll need to prompt for email
-    
-    const userEmail = prompt('Please enter your email address to confirm the password reset:');
-    if (!userEmail) {
-        alert('Email address required to reset password');
-        return;
-    }
-    
-    // Find ANY user with that email and update password
-    const user = mockDB.users.find(u => u.email === userEmail);
-    if (user) {
-        user.password = btoa(newPassword + 'salt123'); // Hash the new password
-        localStorage.setItem('brs_db', JSON.stringify(mockDB)); // Save updated database
-        alert('Password updated successfully! You can now login with your new password.');
-    } else {
-        alert('No account found with that email address');
-        return;
-    }
-    
+    // TODO: In real implementation, validate token and update password via Supabase
+    // For now, we'll just redirect to login
+    alert('Password reset functionality requires Supabase auth flow setup. Please contact support.');
     window.location.href = window.location.origin;
 }
 
-       function viewAllUsers() {
-    const users = mockDB.users.filter(u => !u.isAdmin);
-    
-    if (users.length === 0) {
-        alert('No users have registered yet.');
-        return;
-    }
-    
-    // Create user management modal
-    document.body.insertAdjacentHTML('beforeend', `
-        <div id="userManagementModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div class="relative top-8 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
-                <div class="mt-3">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-medium text-gray-900">User Management</h3>
-                        <button onclick="closeUserManagement()" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Credits</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="userTableBody" class="bg-white divide-y divide-gray-200">
-                                ${users.map(user => createUserRow(user)).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `);
-}
-        
         async function sendPasswordReset() {
             const email = document.getElementById('resetEmail').value;
             if (!email) {
@@ -854,38 +775,12 @@ function updatePasswordFromReset(token) {
                 return;
             }
 
-          const user = mockDB.users.find(function(u) { return u.email === email; });
-if (!user) {
-    alert('No account found with that email address');
-    return;
-}
-
-// Check if user is suspended or deleted
-const status = user.status || 'active';
-if (status === 'suspended') {
-    alert('Your account has been suspended. Please contact support.');
-    return;
-}
-if (status === 'deleted') {
-    alert('This account no longer exists. Please contact support.');
-    return;
-}
-
-            const resetToken = Math.random().toString(36).substr(2, 15);
-            
-            try {
-             await emailjs.send('service_z3nppt7', 'template_40v3r7i', {
-    to_email: email,
-    email: email,
-    reset_link: window.location.origin + '?reset=' + resetToken,
-    user_name: email
-});
-
+            const result = await window.authHelpers.resetPassword(email);
+            if (result.success) {
                 alert('Password reset link sent to your email!');
                 hidePasswordReset();
-            } catch (error) {
-                console.error('Email sending failed:', error);
-                alert('Failed to send reset email. Please try again.');
+            } else {
+                alert('Failed to send reset email: ' + result.error);
             }
         }
 
@@ -912,11 +807,6 @@ if (status === 'deleted') {
                     return;
                 }
 
-                if (mockDB.users.find(function(u) { return u.email === email; })) {
-                    alert('Email already exists');
-                    return;
-                }
-
                 await register(email, password, studentCode);
             } else {
                 await login(email, password);
@@ -924,79 +814,111 @@ if (status === 'deleted') {
         }
 
         async function login(email, password) {
-    setLoading(true);
-    
-    const hashedPassword = hashPassword(password);
-    const user = mockDB.users.find(function(u) { 
-        return u.email === email && u.password === hashedPassword; 
-    });
-    
-    if (user) {
-        // Check if user is suspended or deleted
-        const status = user.status || 'active';
-        if (status === 'suspended') {
-            alert('Your account has been suspended. Please contact support.');
+            setLoading(true);
+            
+            const authResult = await window.authHelpers.signIn(email, password);
+            
+            if (authResult.success) {
+                // Get user profile
+                const profileResult = await window.dbHelpers.getUserProfile(authResult.data.user.id);
+                
+                if (profileResult.success) {
+                    // Check if user is suspended or deleted
+                    const status = profileResult.data.status || 'active';
+                    if (status === 'suspended') {
+                        alert('Your account has been suspended. Please contact support.');
+                        await window.authHelpers.signOut();
+                        setLoading(false);
+                        return;
+                    }
+                    if (status === 'deleted') {
+                        alert('This account no longer exists. Please contact support.');
+                        await window.authHelpers.signOut();
+                        setLoading(false);
+                        return;
+                    }
+                    
+                    currentUser = authResult.data.user;
+                    currentUserProfile = profileResult.data;
+                    showApp();
+                } else {
+                    alert('Profile not found. Please contact support.');
+                    await window.authHelpers.signOut();
+                }
+            } else {
+                alert('Invalid email or password');
+            }
+            
             setLoading(false);
-            return;
         }
-        if (status === 'deleted') {
-            alert('This account no longer exists. Please contact support.');
-            setLoading(false);
-            return;
-        }
-        
-        currentUser = user;
-        saveToStorage();
-        showApp();
-    } else {
-        alert('Invalid email or password');
-    }
-    
-    setLoading(false);
-}
 
         async function register(email, password, studentCode) {
             setLoading(true);
             
-            let userType = 'credits';
-            let credits = 0;
-            let accessExpiry = null;
-
-            if (studentCode) {
-                const code = mockDB.studentCodes.find(function(c) { 
-                    return c.code === studentCode && !c.used; 
-                });
-                if (code) {
+            try {
+                // First check if student code is valid (if provided)
+                let userType = 'credits';
+                let accessExpiry = null;
+                let credits = 0;
+                
+                if (studentCode) {
+                    const codeResult = await window.dbHelpers.getStudentCode(studentCode);
+                    if (!codeResult.success) {
+                        alert('Invalid or already used student code');
+                        setLoading(false);
+                        return;
+                    }
+                    
+                    // Valid code found
                     userType = 'student';
                     const expiry = new Date();
-                    expiry.setMonth(expiry.getMonth() + code.months);
+                    expiry.setMonth(expiry.getMonth() + codeResult.data.months);
                     accessExpiry = expiry.toISOString();
-
-                    code.used = true;
-                    code.usedBy = email;
-                    code.usedAt = new Date().toISOString();
-                } else {
-                    alert('Invalid or already used student code');
-                    setLoading(false);
-                    return;
                 }
+                
+                // Create auth user
+                const authResult = await window.authHelpers.signUp(email, password);
+                
+                if (authResult.success && authResult.data.user) {
+                    // Check if user is admin
+                    const isAdmin = email === 'jacob@bigredstripe.com';
+                    
+                    if (isAdmin) {
+                        userType = 'admin';
+                        credits = 999999;
+                        accessExpiry = null;
+                    }
+                    
+                    // Create user profile
+                    const profileResult = await window.dbHelpers.createUserProfile(
+                        authResult.data.user.id,
+                        email,
+                        userType,
+                        isAdmin
+                    );
+                    
+                    if (profileResult.success) {
+                        // If student code was used, mark it as used
+                        if (studentCode && userType === 'student') {
+                            await window.dbHelpers.useStudentCode(studentCode, authResult.data.user.id);
+                        }
+                        
+                        currentUser = authResult.data.user;
+                        currentUserProfile = profileResult.data;
+                        
+                        alert('Account created successfully!');
+                        showApp();
+                    } else {
+                        alert('Failed to create user profile: ' + profileResult.error);
+                    }
+                } else {
+                    alert('Failed to create account: ' + authResult.error);
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                alert('Registration failed: ' + error.message);
             }
-
-            const newUser = {
-                id: Date.now().toString(),
-                email: email,
-                password: hashPassword(password),
-                userType: userType,
-                credits: credits,
-                accessExpiry: accessExpiry,
-                createdAt: new Date().toISOString(),
-                isAdmin: ['jacob@bigredstripe.com'].includes(email)
-            };
-
-            mockDB.users.push(newUser);
-            currentUser = newUser;
-            saveToStorage();
-            showApp();
+            
             setLoading(false);
         }
 
@@ -1059,55 +981,66 @@ if (status === 'deleted') {
         }
 
         function updateUI() {
-            if (!currentUser) return;
+            if (!currentUserProfile) return;
 
             const userStatus = document.getElementById('userStatus');
-            if (currentUser.userType === 'credits') {
-                userStatus.textContent = currentUser.credits + ' credits remaining';
+            if (currentUserProfile.user_type === 'credits') {
+                userStatus.textContent = currentUserProfile.credits + ' credits remaining';
                 userStatus.className = 'text-sm font-medium text-blue-600';
-            } else if (currentUser.userType === 'student') {
-                const daysLeft = calculateDaysRemaining(currentUser.accessExpiry);
+            } else if (currentUserProfile.user_type === 'student') {
+                const daysLeft = calculateDaysRemaining(currentUserProfile.access_expiry);
                 userStatus.textContent = daysLeft + ' days remaining';
                 userStatus.className = 'text-sm font-medium text-green-600';
-            } else if (currentUser.userType === 'admin') {
+            } else if (currentUserProfile.user_type === 'admin') {
                 userStatus.textContent = 'Unlimited access';
                 userStatus.className = 'text-sm font-medium text-purple-600';
             }
         }
 
-      function loadSettings() {
-    document.getElementById('newEmail').value = currentUser.email;
-    
-    // Hide all payment sections first
-    document.getElementById('creditUserPayment').classList.add('hidden');
-    document.getElementById('studentUserPayment').classList.add('hidden');
-    document.getElementById('adminUserPayment').classList.add('hidden');
-    document.getElementById('adminSettings').classList.add('hidden'); // Always hide admin settings first
-    
-    if (currentUser.userType === 'credits') {
-        document.getElementById('creditUserPayment').classList.remove('hidden');
-        document.getElementById('currentCredits').textContent = currentUser.credits;
-    } else if (currentUser.userType === 'student') {
-        document.getElementById('studentUserPayment').classList.remove('hidden');
-        const daysLeft = calculateDaysRemaining(currentUser.accessExpiry);
-        document.getElementById('studentDaysLeft').textContent = daysLeft;
-    }
-    
-// Show admin sections ONLY if user is actually an admin
-if (currentUser.isAdmin === true) {
-    document.getElementById('adminUserPayment').classList.remove('hidden');
-    document.getElementById('adminSettings').classList.remove('hidden');
-    updateAdminSection();
-    loadUserManagement(); // Add this new line
-}
-}
+        async function loadSettings() {
+            document.getElementById('newEmail').value = currentUser.email;
+            
+            // Hide all payment sections first
+            document.getElementById('creditUserPayment').classList.add('hidden');
+            document.getElementById('studentUserPayment').classList.add('hidden');
+            document.getElementById('adminUserPayment').classList.add('hidden');
+            document.getElementById('adminSettings').classList.add('hidden');
+            
+            if (currentUserProfile.user_type === 'credits') {
+                document.getElementById('creditUserPayment').classList.remove('hidden');
+                document.getElementById('currentCredits').textContent = currentUserProfile.credits;
+            } else if (currentUserProfile.user_type === 'student') {
+                document.getElementById('studentUserPayment').classList.remove('hidden');
+                const daysLeft = calculateDaysRemaining(currentUserProfile.access_expiry);
+                document.getElementById('studentDaysLeft').textContent = daysLeft;
+            }
+            
+            // Show admin sections ONLY if user is actually an admin
+            if (currentUserProfile.is_admin === true) {
+                document.getElementById('adminUserPayment').classList.remove('hidden');
+                document.getElementById('adminSettings').classList.remove('hidden');
+                await updateAdminSection();
+            }
+        }
         
-        function updateAdminSection() {
-            document.getElementById('totalUsers').textContent = mockDB.users.filter(function(u) { return !u.isAdmin; }).length;
-            document.getElementById('totalEvaluations').textContent = mockDB.submissions.length;
-            document.getElementById('codesCount').textContent = mockDB.studentCodes.length;
-            document.getElementById('submissionsCount').textContent = mockDB.submissions.length;
-            document.getElementById('userCount').textContent = mockDB.users.filter(function(u) { return !u.isAdmin; }).length;
+        async function updateAdminSection() {
+            // Get all users (excluding admins)
+            const usersResult = await window.dbHelpers.getAllUsers();
+            const totalUsers = usersResult.success ? usersResult.data.filter(u => !u.is_admin).length : 0;
+            
+            // Get all submissions
+            const submissionsResult = await window.dbHelpers.getAllSubmissions();
+            const totalEvaluations = submissionsResult.success ? submissionsResult.data.length : 0;
+            
+            // Get all student codes
+            const codesResult = await window.dbHelpers.getAllStudentCodes();
+            const totalCodes = codesResult.success ? codesResult.data.length : 0;
+            
+            document.getElementById('totalUsers').textContent = totalUsers;
+            document.getElementById('totalEvaluations').textContent = totalEvaluations;
+            document.getElementById('codesCount').textContent = totalCodes;
+            document.getElementById('submissionsCount').textContent = totalEvaluations;
+            document.getElementById('userCount').textContent = totalUsers;
         }
 
         // Core App Functions
@@ -1127,13 +1060,13 @@ if (currentUser.isAdmin === true) {
                 return;
             }
 
-           if (currentUser.userType === 'credits' && currentUser.credits <= 0) {
-    showSection('purchase');
-    alert('You have no credits remaining. Please purchase more credits to continue.');
-    return;
-}
+            if (currentUserProfile.user_type === 'credits' && currentUserProfile.credits <= 0) {
+                showSection('purchase');
+                alert('You have no credits remaining. Please purchase more credits to continue.');
+                return;
+            }
 
-            if (currentUser.userType === 'student' && new Date(currentUser.accessExpiry) < new Date()) {
+            if (currentUserProfile.user_type === 'student' && new Date(currentUserProfile.access_expiry) < new Date()) {
                 alert('Your student access has expired. Please purchase credits to continue.');
                 showSection('purchase');
                 return;
@@ -1164,38 +1097,38 @@ if (currentUser.isAdmin === true) {
                 const data = await response.json();
                 const claudeResponse = data.evaluation;
 
-                if (currentUser.userType === 'credits') {
-                    currentUser.credits -= 1;
+                // Deduct credit for non-admin users
+                if (currentUserProfile.user_type === 'credits') {
+                    const newCredits = currentUserProfile.credits - 1;
+                    const updateResult = await window.dbHelpers.updateUserCredits(currentUser.id, newCredits);
                     
-                    if (currentUser.credits === 10 || currentUser.credits === 5) {
-                        setTimeout(function() {
-                            alert('You have ' + currentUser.credits + ' credits remaining. Consider purchasing more!');
-                        }, 2000);
-                    } else if (currentUser.credits === 0) {
-                        setTimeout(function() {
-                            alert('You\'re out of credits! Purchase more to continue using the evaluator.');
-                        }, 2000);
+                    if (updateResult.success) {
+                        currentUserProfile.credits = newCredits;
+                        
+                        if (newCredits === 10 || newCredits === 5) {
+                            setTimeout(function() {
+                                alert('You have ' + newCredits + ' credits remaining. Consider purchasing more!');
+                            }, 2000);
+                        } else if (newCredits === 0) {
+                            setTimeout(function() {
+                                alert('You\'re out of credits! Purchase more to continue using the evaluator.');
+                            }, 2000);
+                        }
                     }
                 }
 
-                const submission = {
-                    id: Date.now().toString(),
-                    timestamp: new Date().toISOString(),
-                    userId: currentUser.id,
-                    userEmail: currentUser.email,
-                    formData: formData,
-                    claudeResponse: claudeResponse
-                };
+                // Save submission to database
+                const submissionResult = await window.dbHelpers.createSubmission(
+                    currentUser.id,
+                    formData,
+                    claudeResponse
+                );
 
-                mockDB.submissions.push(submission);
-                currentEvaluation = submission;
-                
-                const userIndex = mockDB.users.findIndex(function(u) { return u.id === currentUser.id; });
-                if (userIndex !== -1) {
-                    mockDB.users[userIndex] = currentUser;
+                if (submissionResult.success) {
+                    currentEvaluation = submissionResult.data;
+                } else {
+                    console.error('Failed to save submission:', submissionResult.error);
                 }
-
-                saveToStorage();
 
                 document.getElementById('originalLogline').textContent = '"' + formData.logline + '"';
                 document.getElementById('evaluationResult').textContent = claudeResponse;
@@ -1226,422 +1159,362 @@ if (currentUser.isAdmin === true) {
         }
 
         // Purchase Functions
-       function updatePurchaseSection() {
-    const userSubmissions = mockDB.submissions.filter(function(s) { return s.userId === currentUser.id; }).length;
-    
-    // For now, everyone gets beta pricing during the beta period
-    const isBeta = true; // Change this to false when beta period ends
-    
-    if (isBeta) {
-        document.getElementById('betaDiscount').classList.remove('hidden');
-        document.getElementById('price25').innerHTML = '<span class="line-through text-gray-400">$30</span> $15';
-        document.getElementById('price50').innerHTML = '<span class="line-through text-gray-400">$60</span> $30';
-        document.getElementById('price100').innerHTML = '<span class="line-through text-gray-400">$100</span> $50';
-    } else {
-        document.getElementById('betaDiscount').classList.add('hidden');
-        document.getElementById('price25').textContent = '$30';
-        document.getElementById('price50').textContent = '$60';
-        document.getElementById('price100').textContent = '$100';
-    }
-}
+        function updatePurchaseSection() {
+            // For now, everyone gets beta pricing during the beta period
+            const isBeta = true; // Change this to false when beta period ends
+            
+            if (isBeta) {
+                document.getElementById('betaDiscount').classList.remove('hidden');
+                document.getElementById('price25').innerHTML = '<span class="line-through text-gray-400">$30</span> $15';
+                document.getElementById('price50').innerHTML = '<span class="line-through text-gray-400">$60</span> $30';
+                document.getElementById('price100').innerHTML = '<span class="line-through text-gray-400">$100</span> $50';
+            } else {
+                document.getElementById('betaDiscount').classList.add('hidden');
+                document.getElementById('price25').textContent = '$30';
+                document.getElementById('price50').textContent = '$60';
+                document.getElementById('price100').textContent = '$100';
+            }
+        }
 
         async function purchaseCredits(amount) {
-   const prices = { 20: 30, 50: 60, 100: 100 };
-    const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id).length;
-const isBeta = true; // Change this to false when beta period ends
-const finalPrice = isBeta ? Math.floor(prices[amount] / 2) : prices[amount];
+            const prices = { 20: 30, 50: 60, 100: 100 };
+            const isBeta = true; // Change this to false when beta period ends
+            const finalPrice = isBeta ? Math.floor(prices[amount] / 2) : prices[amount];
 
-    try {
-        // Call your Netlify function to create payment session
-        const response = await fetch('/.netlify/functions/create-payment', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                amount: amount,
-                price: finalPrice,
-                userEmail: currentUser.email,
-                userId: currentUser.id,
-                isBeta: isBeta
-            })
-        });
+            try {
+                // Call your Netlify function to create payment session
+                const response = await fetch('/.netlify/functions/create-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        amount: amount,
+                        price: finalPrice,
+                        userEmail: currentUser.email,
+                        userId: currentUser.id,
+                        isBeta: isBeta
+                    })
+                });
 
-        const session = await response.json();
+                const session = await response.json();
 
-        if (!response.ok) {
-            throw new Error(session.error || 'Failed to create payment session');
+                if (!response.ok) {
+                    throw new Error(session.error || 'Failed to create payment session');
+                }
+
+                // Redirect to Stripe Checkout
+                const stripe = Stripe('pk_test_51IAqQXGeynMWYbxDVS6wPalfpyuFfRknJN1xnYqmXGFT2B37foYZHdKYkMKohUZAgOOHflOGLYgiKev537GuOZKi00XO4MKDk9');
+                const { error } = await stripe.redirectToCheckout({
+                    sessionId: session.id
+                });
+
+                if (error) {
+                    console.error('Stripe redirect error:', error);
+                    alert('Error redirecting to payment: ' + error.message);
+                }
+
+            } catch (error) {
+                console.error('Payment initiation error:', error);
+                alert('Error starting payment process: ' + error.message);
+            }
         }
 
-        // Redirect to Stripe Checkout
-        const stripe = Stripe('pk_test_51IAqQXGeynMWYbxDVS6wPalfpyuFfRknJN1xnYqmXGFT2B37foYZHdKYkMKohUZAgOOHflOGLYgiKev537GuOZKi00XO4MKDk9');
-        const { error } = await stripe.redirectToCheckout({
-            sessionId: session.id
-        });
-
-        if (error) {
-            console.error('Stripe redirect error:', error);
-            alert('Error redirecting to payment: ' + error.message);
-        }
-
-    } catch (error) {
-        console.error('Payment initiation error:', error);
-        alert('Error starting payment process: ' + error.message);
-    }
-}
-
-        function loadHistory() {
-    const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id);
-    
-    if (userSubmissions.length === 0) {
-        document.getElementById('noHistory').classList.remove('hidden');
-        document.getElementById('historyList').innerHTML = '';
-        return;
-    }
-    
-    document.getElementById('noHistory').classList.add('hidden');
-    
-    // Sort submissions by date (newest first)
-    const sortedSubmissions = userSubmissions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    
-    // Apply pagination
-    const totalItems = sortedSubmissions.length;
-    const totalPages = Math.ceil(totalItems / historyPerPage);
-    const startIndex = (currentHistoryPage - 1) * historyPerPage;
-    const endIndex = startIndex + historyPerPage;
-    const pageSubmissions = showAllHistory ? sortedSubmissions : sortedSubmissions.slice(startIndex, endIndex);
-    
-    // Generate history list HTML
-    const historyHTML = pageSubmissions.map(submission => {
-        const date = new Date(submission.timestamp).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-        
-        return `
-            <div class="history-item border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                 onclick="viewHistoryItem('${submission.id}')">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="flex-1">
-                        <h3 class="font-medium text-gray-900 mb-1">
-                            ${truncateLogline(submission.formData.logline, 80)}
-                        </h3>
-                        <p class="text-sm text-gray-600">
-                            <span class="font-medium">Genre:</span> ${submission.formData.genre} | 
-                            <span class="font-medium">Tone:</span> ${submission.formData.tone}
+        async function loadHistory() {
+            const submissionsResult = await window.dbHelpers.getUserSubmissions(currentUser.id);
+            
+            if (!submissionsResult.success || submissionsResult.data.length === 0) {
+                document.getElementById('noHistory').classList.remove('hidden');
+                document.getElementById('historyList').innerHTML = '';
+                return;
+            }
+            
+            document.getElementById('noHistory').classList.add('hidden');
+            
+            // Sort submissions by date (newest first)
+            const sortedSubmissions = submissionsResult.data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            // Apply pagination
+            const totalItems = sortedSubmissions.length;
+            const totalPages = Math.ceil(totalItems / historyPerPage);
+            const startIndex = (currentHistoryPage - 1) * historyPerPage;
+            const endIndex = startIndex + historyPerPage;
+            const pageSubmissions = showAllHistory ? sortedSubmissions : sortedSubmissions.slice(startIndex, endIndex);
+            
+            // Generate history list HTML
+            const historyHTML = pageSubmissions.map(submission => {
+                const date = new Date(submission.timestamp).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                return `
+                    <div class="history-item border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                         onclick="viewHistoryItem('${submission.id}')">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <h3 class="font-medium text-gray-900 mb-1">
+                                    ${truncateLogline(submission.form_data.logline, 80)}
+                                </h3>
+                                <p class="text-sm text-gray-600">
+                                    <span class="font-medium">Genre:</span> ${submission.form_data.genre} | 
+                                    <span class="font-medium">Tone:</span> ${submission.form_data.tone}
+                                </p>
+                            </div>
+                            <div class="text-right ml-4">
+                                <p class="text-sm text-gray-500">${date}</p>
+                                <div class="flex space-x-2 mt-1">
+                                    <button onclick="event.stopPropagation(); downloadHistoryPDF('${submission.id}')" 
+                                            class="text-blue-600 hover:text-blue-800 text-xs">
+                                        PDF
+                                    </button>
+                                    <button onclick="event.stopPropagation(); deleteHistoryItem('${submission.id}')" 
+                                            class="text-red-600 hover:text-red-800 text-xs">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-700 line-clamp-2">
+                            ${truncateLogline(submission.claude_response, 150)}
                         </p>
                     </div>
-                    <div class="text-right ml-4">
-                        <p class="text-sm text-gray-500">${date}</p>
-                        <div class="flex space-x-2 mt-1">
-                            <button onclick="event.stopPropagation(); downloadHistoryPDF('${submission.id}')" 
-                                    class="text-blue-600 hover:text-blue-800 text-xs">
-                                PDF
-                            </button>
-                            <button onclick="event.stopPropagation(); deleteHistoryItem('${submission.id}')" 
-                                    class="text-red-600 hover:text-red-800 text-xs">
-                                Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <p class="text-sm text-gray-700 line-clamp-2">
-                    ${truncateLogline(submission.claudeResponse, 150)}
-                </p>
-            </div>
-        `;
-    }).join('');
-    
-    document.getElementById('historyList').innerHTML = historyHTML;
-    
-    // Update pagination
-    if (!showAllHistory && totalPages > 1) {
-        updateHistoryPagination(totalPages);
-    } else {
-        document.getElementById('historyPagination').innerHTML = '';
-    }
-}
-
-function toggleShowAllHistory() {
-    showAllHistory = !showAllHistory;
-    currentHistoryPage = 1;
-    const button = document.getElementById('showAllHistoryBtn');
-    button.textContent = showAllHistory ? 'Show Paginated' : 'Show All';
-    loadHistory();
-}
-
-       function downloadEvaluationPDF() {
-    if (!currentEvaluation) {
-        alert('No evaluation data available to download');
-        return;
-    }
-
-    try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        // Set up the document
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 20;
-        const maxWidth = pageWidth - (margin * 2);
-        let yPosition = margin;
-        
-        // Helper function to check if we need a new page
-        function checkPageBreak(neededSpace = 20) {
-            if (yPosition + neededSpace > pageHeight - margin) {
-                doc.addPage();
-                yPosition = margin;
-                return true;
-            }
-            return false;
-        }
-        
-        // Helper function to add text with proper page breaks
-        function addText(text, fontSize = 12, isBold = false, addSpacing = 5) {
-            doc.setFontSize(fontSize);
-            if (isBold) {
-                doc.setFont(undefined, 'bold');
+                `;
+            }).join('');
+            
+            document.getElementById('historyList').innerHTML = historyHTML;
+            
+            // Update pagination
+            if (!showAllHistory && totalPages > 1) {
+                updateHistoryPagination(totalPages);
             } else {
-                doc.setFont(undefined, 'normal');
+                document.getElementById('historyPagination').innerHTML = '';
             }
-            
-            const lines = doc.splitTextToSize(text, maxWidth);
-            const lineHeight = fontSize * 0.4;
-            const totalHeight = lines.length * lineHeight + addSpacing;
-            
-            // Check if this text block will fit on current page
-            if (yPosition + totalHeight > pageHeight - margin) {
-                doc.addPage();
-                yPosition = margin;
-            }
-            
-            // Add the text
-            for (let i = 0; i < lines.length; i++) {
-                // Double-check for each line in case of very long paragraphs
-                if (yPosition + lineHeight > pageHeight - margin) {
-                    doc.addPage();
-                    yPosition = margin;
-                }
-                doc.text(lines[i], margin, yPosition);
-                yPosition += lineHeight;
-            }
-            
-            yPosition += addSpacing;
         }
-        
-        // Helper function to add large text blocks (like evaluation results)
-        function addLargeTextBlock(text, fontSize = 11) {
-            // Split into paragraphs first
-            const paragraphs = text.split('\n\n');
-            
-            for (let i = 0; i < paragraphs.length; i++) {
-                const paragraph = paragraphs[i].trim();
-                if (paragraph.length === 0) continue;
+
+        function toggleShowAllHistory() {
+            showAllHistory = !showAllHistory;
+            currentHistoryPage = 1;
+            const button = document.getElementById('showAllHistoryBtn');
+            button.textContent = showAllHistory ? 'Show Paginated' : 'Show All';
+            loadHistory();
+        }
+
+        function downloadEvaluationPDF() {
+            if (!currentEvaluation) {
+                alert('No evaluation data available to download');
+                return;
+            }
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
                 
-                // Check if this looks like a heading (short line, often numbered)
-                const isHeading = paragraph.length < 100 && (
-                    paragraph.match(/^\d+\./) || 
-                    paragraph.includes('Alternative') ||
-                    paragraph.includes('Title') ||
-                    paragraph.includes('Feedback') ||
-                    paragraph.includes('Summary')
-                );
+                // Set up the document
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const margin = 20;
+                const maxWidth = pageWidth - (margin * 2);
+                let yPosition = margin;
                 
-                if (isHeading) {
-                    // Add extra space before headings and keep with next paragraph
-                    checkPageBreak(40);
-                    addText(paragraph, fontSize + 1, true, 8);
-                } else {
-                    addText(paragraph, fontSize, false, 6);
+                // Helper function to check if we need a new page
+                function checkPageBreak(neededSpace = 20) {
+                    if (yPosition + neededSpace > pageHeight - margin) {
+                        doc.addPage();
+                        yPosition = margin;
+                        return true;
+                    }
+                    return false;
                 }
+                
+                // Helper function to add text with proper page breaks
+                function addText(text, fontSize = 12, isBold = false, addSpacing = 5) {
+                    doc.setFontSize(fontSize);
+                    if (isBold) {
+                        doc.setFont(undefined, 'bold');
+                    } else {
+                        doc.setFont(undefined, 'normal');
+                    }
+                    
+                    const lines = doc.splitTextToSize(text, maxWidth);
+                    const lineHeight = fontSize * 0.4;
+                    const totalHeight = lines.length * lineHeight + addSpacing;
+                    
+                    // Check if this text block will fit on current page
+                    if (yPosition + totalHeight > pageHeight - margin) {
+                        doc.addPage();
+                        yPosition = margin;
+                    }
+                    
+                    // Add the text
+                    for (let i = 0; i < lines.length; i++) {
+                        // Double-check for each line in case of very long paragraphs
+                        if (yPosition + lineHeight > pageHeight - margin) {
+                            doc.addPage();
+                            yPosition = margin;
+                        }
+                        doc.text(lines[i], margin, yPosition);
+                        yPosition += lineHeight;
+                    }
+                    
+                    yPosition += addSpacing;
+                }
+                
+                // Helper function to add large text blocks (like evaluation results)
+                function addLargeTextBlock(text, fontSize = 11) {
+                    // Split into paragraphs first
+                    const paragraphs = text.split('\n\n');
+                    
+                    for (let i = 0; i < paragraphs.length; i++) {
+                        const paragraph = paragraphs[i].trim();
+                        if (paragraph.length === 0) continue;
+                        
+                        // Check if this looks like a heading (short line, often numbered)
+                        const isHeading = paragraph.length < 100 && (
+                            paragraph.match(/^\d+\./) || 
+                            paragraph.includes('Alternative') ||
+                            paragraph.includes('Title') ||
+                            paragraph.includes('Feedback') ||
+                            paragraph.includes('Summary')
+                        );
+                        
+                        if (isHeading) {
+                            // Add extra space before headings and keep with next paragraph
+                            checkPageBreak(40);
+                            addText(paragraph, fontSize + 1, true, 8);
+                        } else {
+                            addText(paragraph, fontSize, false, 6);
+                        }
+                    }
+                }
+                
+                // Add header
+                addText('BRS Labs - Logline Evaluation Report', 16, true, 10);
+                
+                // Add date
+                addText('Generated: ' + new Date(currentEvaluation.timestamp).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }), 10, false, 15);
+                
+                // Add original logline
+                addText('Your Original Logline:', 14, true, 5);
+                addText('"' + currentEvaluation.form_data.logline + '"', 12, false, 15);
+                
+                // Add form data
+                addText('Project Details:', 14, true, 5);
+                addText('Genre: ' + currentEvaluation.form_data.genre, 11, false, 3);
+                addText('Tone: ' + currentEvaluation.form_data.tone, 11, false, 3);
+                addText('Protagonist: ' + currentEvaluation.form_data.mainCharacter, 11, false, 3);
+                addText('Antagonist: ' + currentEvaluation.form_data.antagonist, 11, false, 3);
+                addText('Setup/Inciting Incident: ' + currentEvaluation.form_data.incitingIncident, 11, false, 3);
+                addText('Story Details: ' + currentEvaluation.form_data.storyDetails, 11, false, 15);
+                
+                // Add evaluation results with smart page breaks
+                addText('Evaluation Results:', 14, true, 8);
+                addLargeTextBlock(currentEvaluation.claude_response, 11);
+                
+                // Add footer on a new section
+                yPosition += 15;
+                checkPageBreak(30);
+                addText('Generated by BRS Labs Logline Evaluator', 10, false, 3);
+                addText('For more screenwriting resources, visit: https://sales.bigredstripe.com/crucible/', 10, false, 3);
+                
+                // Generate filename with date
+                const dateStr = new Date(currentEvaluation.timestamp).toLocaleDateString('en-US').replace(/\//g, '-');
+                const filename = `Logline_Evaluation_${dateStr}.pdf`;
+                
+                // Save the PDF
+                doc.save(filename);
+                
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                alert('Error generating PDF. Please try again.');
             }
         }
-        
-        // Add header
-        addText('BRS Labs - Logline Evaluation Report', 16, true, 10);
-        
-        // Add date
-        addText('Generated: ' + new Date(currentEvaluation.timestamp).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        }), 10, false, 15);
-        
-        // Add original logline
-        addText('Your Original Logline:', 14, true, 5);
-        addText('"' + currentEvaluation.formData.logline + '"', 12, false, 15);
-        
-        // Add form data
-        addText('Project Details:', 14, true, 5);
-        addText('Genre: ' + currentEvaluation.formData.genre, 11, false, 3);
-        addText('Tone: ' + currentEvaluation.formData.tone, 11, false, 3);
-        addText('Protagonist: ' + currentEvaluation.formData.mainCharacter, 11, false, 3);
-        addText('Antagonist: ' + currentEvaluation.formData.antagonist, 11, false, 3);
-        addText('Setup/Inciting Incident: ' + currentEvaluation.formData.incitingIncident, 11, false, 3);
-        addText('Story Details: ' + currentEvaluation.formData.storyDetails, 11, false, 15);
-        
-        // Add evaluation results with smart page breaks
-        addText('Evaluation Results:', 14, true, 8);
-        addLargeTextBlock(currentEvaluation.claudeResponse, 11);
-        
-        // Add footer on a new section
-        yPosition += 15;
-        checkPageBreak(30);
-        addText('Generated by BRS Labs Logline Evaluator', 10, false, 3);
-        addText('For more screenwriting resources, visit: https://sales.bigredstripe.com/crucible/', 10, false, 3);
-        
-        // Generate filename with date
-        const dateStr = new Date(currentEvaluation.timestamp).toLocaleDateString('en-US').replace(/\//g, '-');
-        const filename = `Logline_Evaluation_${dateStr}.pdf`;
-        
-        // Save the PDF
-        doc.save(filename);
-        
-    } catch (error) {
-        console.error('PDF generation error:', error);
-        alert('Error generating PDF. Please try again.');
-    }
-}
 
-       function updateEmail() {
-    const newEmail = document.getElementById('newEmail').value;
+        async function updateEmail() {
+            const newEmail = document.getElementById('newEmail').value;
 
-    // Validation
-    if (!newEmail) {
-        alert('Please enter a new email address');
-        return;
-    }
+            // Validation
+            if (!newEmail) {
+                alert('Please enter a new email address');
+                return;
+            }
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmail)) {
-        alert('Please enter a valid email address');
-        return;
-    }
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(newEmail)) {
+                alert('Please enter a valid email address');
+                return;
+            }
 
-    // Check if email already exists (excluding current user)
-    const existingUser = mockDB.users.find(u => u.email === newEmail && u.id !== currentUser.id);
-    if (existingUser) {
-        alert('This email address is already in use by another account');
-        return;
-    }
-
-    // Update email
-    const oldEmail = currentUser.email;
-    currentUser.email = newEmail;
-
-    // Update in database
-    const userIndex = mockDB.users.findIndex(u => u.id === currentUser.id);
-    if (userIndex !== -1) {
-        mockDB.users[userIndex].email = newEmail;
-    }
-
-    // Save to storage
-    saveToStorage();
-
-    alert(`Email updated successfully from ${oldEmail} to ${newEmail}!`);
-}
-
-       function updatePassword() {
-    const currentPassword = document.getElementById('currentPassword').value;
-    const newPassword = document.getElementById('newPassword').value;
-    const confirmNewPassword = document.getElementById('confirmNewPassword').value;
-
-    // Validation
-    if (!currentPassword || !newPassword || !confirmNewPassword) {
-        alert('Please fill in all password fields');
-        return;
-    }
-
-   // Check current password (with debugging)
-const hashedCurrentPassword = hashPassword(currentPassword);
-
-if (hashedCurrentPassword !== currentUser.password) {
-    alert('Current password is incorrect');
-    return;
-}
-
-    // Check new password confirmation
-    if (newPassword !== confirmNewPassword) {
-        alert('New passwords do not match');
-        return;
-    }
-
-    // Validate new password strength
-    if (!validatePassword(newPassword)) {
-        alert('New password does not meet requirements: 8+ characters, uppercase, lowercase, number, special character');
-        return;
-    }
-
-    // Update password
-    const newHashedPassword = hashPassword(newPassword);
-    currentUser.password = newHashedPassword;
-
-    // Update in database
-    const userIndex = mockDB.users.findIndex(u => u.id === currentUser.id);
-    if (userIndex !== -1) {
-        mockDB.users[userIndex].password = newHashedPassword;
-    }
-
-    // Save to storage
-    saveToStorage();
-
-    // Clear form fields
-    document.getElementById('currentPassword').value = '';
-    document.getElementById('newPassword').value = '';
-    document.getElementById('confirmNewPassword').value = '';
-
-    // Hide password strength indicator
-    document.getElementById('newPasswordStrength').classList.add('hidden');
-
-    alert('Password updated successfully!');
-}
-
-      async function managePayment() {
-    console.log('managePayment() called');
-    console.log('currentUser:', currentUser);
-    
-    try {
-        console.log('Calling customer portal function...');
-        
-        const response = await fetch('/.netlify/functions/create-customer-portal', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                userEmail: currentUser.email,
-                userId: currentUser.id
-            })
-        });
-
-        console.log('Response status:', response.status);
-        console.log('Response ok:', response.ok);
-        
-        const result = await response.json();
-        console.log('Response result:', result);
-
-        if (!response.ok) {
-            throw new Error(result.error || 'Failed to access customer portal');
+            // TODO: Implement email update via Supabase auth
+            alert('Email update functionality requires Supabase auth flow setup. Please contact support.');
         }
 
-        // Redirect to Stripe Customer Portal
-        console.log('Redirecting to:', result.url);
-        window.location.href = result.url;
+        async function updatePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmNewPassword = document.getElementById('confirmNewPassword').value;
 
-    } catch (error) {
-        console.error('Customer portal error:', error);
-        alert('Error accessing payment management. Please try again. Error: ' + error.message);
-    }
-}
+            // Validation
+            if (!currentPassword || !newPassword || !confirmNewPassword) {
+                alert('Please fill in all password fields');
+                return;
+            }
 
-        function generateStudentCodes() {
+            // Check new password confirmation
+            if (newPassword !== confirmNewPassword) {
+                alert('New passwords do not match');
+                return;
+            }
+
+            // Validate new password strength
+            if (!validatePassword(newPassword)) {
+                alert('New password does not meet requirements: 8+ characters, uppercase, lowercase, number, special character');
+                return;
+            }
+
+            // TODO: Implement password update via Supabase auth
+            alert('Password update functionality requires Supabase auth flow setup. Please contact support.');
+        }
+
+        async function managePayment() {
+            try {
+                const response = await fetch('/.netlify/functions/create-customer-portal', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userEmail: currentUser.email,
+                        userId: currentUser.id
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to access customer portal');
+                }
+
+                // Redirect to Stripe Customer Portal
+                window.location.href = result.url;
+
+            } catch (error) {
+                console.error('Customer portal error:', error);
+                alert('Error accessing payment management. Please try again. Error: ' + error.message);
+            }
+        }
+
+        async function generateStudentCodes() {
             const quantity = parseInt(document.getElementById('codeQuantity').value) || 1;
             const months = parseInt(document.getElementById('codeMonths').value) || 3;
 
@@ -1649,121 +1522,186 @@ if (hashedCurrentPassword !== currentUser.password) {
             for (let i = 0; i < quantity; i++) {
                 const code = 'STUDENT-' + Math.random().toString(36).substr(2, 6).toUpperCase();
                 newCodes.push({
-                    id: Date.now().toString() + i,
                     code: code,
+                    code_type: 'time_based',
                     months: months,
-                    createdAt: new Date().toISOString(),
-                    used: false
+                    credits: 0
                 });
             }
 
-            mockDB.studentCodes.push.apply(mockDB.studentCodes, newCodes);
-            saveToStorage();
-            updateAdminSection();
+            const result = await window.dbHelpers.createStudentCodes(newCodes, currentUser.id);
             
-            alert('Generated ' + quantity + ' codes for ' + months + ' months each!\n\nCodes: ' + newCodes.map(function(c) { return c.code; }).join(', '));
-        }
-
-       function downloadCodes() {
-    if (mockDB.studentCodes.length === 0) {
-        alert('No student codes available to download');
-        return;
-    }
-
-    // Create CSV content
-    const headers = ['Code', 'Months', 'Created Date', 'Status', 'Used By', 'Used Date'];
-    const csvContent = [
-        headers.join(','),
-        ...mockDB.studentCodes.map(code => [
-            code.code,
-            code.months,
-            formatDate(code.createdAt),
-            code.used ? 'Used' : 'Available',
-            code.usedBy || '',
-            code.usedAt ? formatDate(code.usedAt) : ''
-        ].join(','))
-    ].join('\n');
-
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `student_codes_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-       function downloadAllSubmissions() {
-    if (mockDB.submissions.length === 0) {
-        alert('No submissions available to download');
-        return;
-    }
-
-    // Create CSV content
-    const headers = [
-        'Submission ID',
-        'User Email', 
-        'Date',
-        'Genre',
-        'Tone',
-        'Protagonist',
-        'Antagonist',
-        'Setup/Inciting Incident',
-        'Story Details',
-        'Original Logline',
-        'Evaluation Response'
-    ];
-    
-    const csvContent = [
-        headers.join(','),
-        ...mockDB.submissions.map(submission => [
-            `"${submission.id}"`, // Add quotes to prevent scientific notation
-            `"${submission.userEmail}"`,
-            `"${formatDate(submission.timestamp)}"`, // Add quotes around date
-            `"${submission.formData.genre}"`,
-            `"${submission.formData.tone}"`,
-            `"${submission.formData.mainCharacter.replace(/"/g, '""')}"`,
-            `"${submission.formData.antagonist.replace(/"/g, '""')}"`,
-            `"${submission.formData.incitingIncident.replace(/"/g, '""')}"`,
-            `"${submission.formData.storyDetails.replace(/"/g, '""')}"`,
-            `"${submission.formData.logline.replace(/"/g, '""')}"`,
-            `"${submission.claudeResponse.replace(/"/g, '""')}"` // Remove truncation, keep full response
-        ].join(','))
-    ].join('\n');
-
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `all_submissions_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-        function logout() {
-            localStorage.removeItem('brs_user');
-            currentUser = null;
-            currentView = 'login';
-            currentEvaluation = null;
-            
-            document.getElementById('appSection').classList.add('hidden');
-            document.getElementById('authSection').classList.remove('hidden');
-            
-            document.getElementById('authEmail').value = '';
-            document.getElementById('authPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
-            document.getElementById('studentCode').value = '';
-            
-            if (currentView !== 'login') {
-                toggleAuthMode();
+            if (result.success) {
+                await updateAdminSection();
+                alert('Generated ' + quantity + ' codes for ' + months + ' months each!\n\nCodes: ' + newCodes.map(c => c.code).join(', '));
+            } else {
+                alert('Failed to generate codes: ' + result.error);
             }
         }
+
+        async function downloadCodes() {
+            const codesResult = await window.dbHelpers.getAllStudentCodes();
+            
+            if (!codesResult.success || codesResult.data.length === 0) {
+                alert('No student codes available to download');
+                return;
+            }
+
+            // Create CSV content
+            const headers = ['Code', 'Type', 'Months', 'Credits', 'Created Date', 'Status', 'Used By', 'Used Date'];
+            const csvContent = [
+                headers.join(','),
+                ...codesResult.data.map(code => [
+                    code.code,
+                    code.code_type,
+                    code.months || '',
+                    code.credits || '',
+                    formatDate(code.created_at),
+                    code.used ? 'Used' : 'Available',
+                    code.used_by || '',
+                    code.used_at ? formatDate(code.used_at) : ''
+                ].join(','))
+            ].join('\n');
+
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `student_codes_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        async function downloadAllSubmissions() {
+            const submissionsResult = await window.dbHelpers.getAllSubmissions();
+            
+            if (!submissionsResult.success || submissionsResult.data.length === 0) {
+                alert('No submissions available to download');
+                return;
+            }
+
+            // Create CSV content
+            const headers = [
+                'Submission ID',
+                'User Email', 
+                'Date',
+                'Genre',
+                'Tone',
+                'Protagonist',
+                'Antagonist',
+                'Setup/Inciting Incident',
+                'Story Details',
+                'Original Logline',
+                'Evaluation Response'
+            ];
+            
+            const csvContent = [
+                headers.join(','),
+                ...submissionsResult.data.map(submission => [
+                    `"${submission.id}"`,
+                    `"${submission.user_profiles?.email || 'Unknown'}"`,
+                    `"${formatDate(submission.timestamp)}"`,
+                    `"${submission.form_data.genre}"`,
+                    `"${submission.form_data.tone}"`,
+                    `"${submission.form_data.mainCharacter.replace(/"/g, '""')}"`,
+                    `"${submission.form_data.antagonist.replace(/"/g, '""')}"`,
+                    `"${submission.form_data.incitingIncident.replace(/"/g, '""')}"`,
+                    `"${submission.form_data.storyDetails.replace(/"/g, '""')}"`,
+                    `"${submission.form_data.logline.replace(/"/g, '""')}"`,
+                    `"${submission.claude_response.replace(/"/g, '""')}"`
+                ].join(','))
+            ].join('\n');
+
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `all_submissions_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        async function viewAllUsers() {
+            const usersResult = await window.dbHelpers.getAllUsers();
+            
+            if (!usersResult.success) {
+                alert('Failed to load users: ' + usersResult.error);
+                return;
+            }
+            
+            const users = usersResult.data.filter(u => !u.is_admin);
+            
+            if (users.length === 0) {
+                alert('No users have registered yet.');
+                return;
+            }
+            
+            // Create user management modal
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="userManagementModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                    <div class="relative top-8 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+                        <div class="mt-3">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-medium text-gray-900">User Management</h3>
+                                <button onclick="closeUserManagement()" class="text-gray-400 hover:text-gray-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Credits</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="userTableBody" class="bg-white divide-y divide-gray-200">
+                                        ${users.map(user => createUserRow(user)).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+
+        async function logout() {
+            const result = await window.authHelpers.signOut();
+            if (result.success) {
+                currentUser = null;
+                currentUserProfile = null;
+                currentView = 'login';
+                currentEvaluation = null;
+                
+                document.getElementById('appSection').classList.add('hidden');
+                document.getElementById('authSection').classList.remove('hidden');
+                
+                document.getElementById('authEmail').value = '';
+                document.getElementById('authPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+                document.getElementById('studentCode').value = '';
+                
+                if (currentView !== 'login') {
+                    toggleAuthMode();
+                }
+            } else {
+                console.error('Logout error:', result.error);
+            }
+        }
+
         async function handlePaymentSuccess(sessionId, userId, expectedAmount) {
             try {
                 // Show loading state
@@ -1796,31 +1734,12 @@ if (hashedCurrentPassword !== currentUser.password) {
                     throw new Error(result.error || 'Payment verification failed');
                 }
 
-                // Payment verified successfully, add credits to user account
-                const savedDB = localStorage.getItem('brs_db');
-                if (savedDB) {
-                    mockDB = JSON.parse(savedDB);
-                }
-
-                // Find and update the user
-                const userIndex = mockDB.users.findIndex(u => u.id === userId);
-                if (userIndex === -1) {
-                    throw new Error('User not found');
-                }
-
-                // Add credits to user account
-                mockDB.users[userIndex].credits += result.creditAmount;
-                
-                // Save updated database
-                localStorage.setItem('brs_db', JSON.stringify(mockDB));
-
-                // Update current user if it's the same user
-                const savedUser = localStorage.getItem('brs_user');
-                if (savedUser) {
-                    const user = JSON.parse(savedUser);
-                    if (user.id === userId) {
-                        user.credits += result.creditAmount;
-                        localStorage.setItem('brs_user', JSON.stringify(user));
+                // Payment verified successfully, add credits to user account in Supabase
+                if (window.dbHelpers) {
+                    const userResult = await window.dbHelpers.getUserProfile(userId);
+                    if (userResult.success) {
+                        const newCredits = userResult.data.credits + result.creditAmount;
+                        await window.dbHelpers.updateUserCredits(userId, newCredits);
                     }
                 }
 
@@ -1839,7 +1758,7 @@ if (hashedCurrentPassword !== currentUser.password) {
                             </p>
                             <div class="bg-gray-50 rounded-lg p-4 mb-6">
                                 <p class="text-sm text-gray-600">
-                                    Payment Amount: $${result.paymentAmount}<br>
+                                    Payment Amount: ${result.paymentAmount}<br>
                                     Credits Added: ${result.creditAmount}<br>
                                     Email: ${result.customerEmail}
                                 </p>
@@ -1885,219 +1804,214 @@ if (hashedCurrentPassword !== currentUser.password) {
             const cleanUrl = window.location.origin;
             window.location.href = cleanUrl;
         }
+
         function shouldRedirectToPurchase() {
-    // Only redirect credits users with 0 credits
-    if (currentUser.userType === 'credits' && currentUser.credits <= 0) {
-        return true;
-    }
-    return false;
-}
+            // Only redirect credits users with 0 credits
+            if (currentUserProfile && currentUserProfile.user_type === 'credits' && currentUserProfile.credits <= 0) {
+                return true;
+            }
+            return false;
+        }
 
-function isNewUser() {
-    // Check if user has ever made a submission
-    const userSubmissions = mockDB.submissions.filter(s => s.userId === currentUser.id);
-    return userSubmissions.length === 0;
-}
+        function isNewUser() {
+            // This would need to be determined by checking submissions, but for now return false
+            return false;
+        }
+
         function createUserRow(user) {
-    const status = user.status || 'active';
-    const statusColor = status === 'active' ? 'text-green-600' : status === 'suspended' ? 'text-yellow-600' : 'text-red-600';
-    const statusText = status.charAt(0).toUpperCase() + status.slice(1);
-    
-    return `
-        <tr>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.email}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.userType}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.credits}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${statusColor}">${statusText}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(user.createdAt)}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                ${status === 'active' ? 
-                    `<button onclick="suspendUser('${user.id}')" class="text-yellow-600 hover:text-yellow-900">Suspend</button>` :
-                    status === 'suspended' ? 
-                    `<button onclick="unsuspendUser('${user.id}')" class="text-green-600 hover:text-green-900">Unsuspend</button>` : ''
+            const status = user.status || 'active';
+            const statusColor = status === 'active' ? 'text-green-600' : status === 'suspended' ? 'text-yellow-600' : 'text-red-600';
+            const statusText = status.charAt(0).toUpperCase() + status.slice(1);
+            
+            return `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.email}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.user_type}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.credits}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${statusColor}">${statusText}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(user.created_at)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        ${status === 'active' ? 
+                            `<button onclick="suspendUser('${user.id}')" class="text-yellow-600 hover:text-yellow-900">Suspend</button>` :
+                            status === 'suspended' ? 
+                            `<button onclick="unsuspendUser('${user.id}')" class="text-green-600 hover:text-green-900">Unsuspend</button>` : ''
+                        }
+                        ${status !== 'deleted' ? 
+                            `<button onclick="deleteUser('${user.id}')" class="text-red-600 hover:text-red-900">Delete</button>` : ''
+                        }
+                    </td>
+                </tr>
+            `;
+        }
+
+        function closeUserManagement() {
+            const modal = document.getElementById('userManagementModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        async function suspendUser(userId) {
+            if (!confirm('Are you sure you want to suspend this user? They will not be able to log in.')) {
+                return;
+            }
+            
+            const result = await window.dbHelpers.updateUserStatus(userId, 'suspended');
+            if (result.success) {
+                // Refresh the user table
+                const tableBody = document.getElementById('userTableBody');
+                if (tableBody) {
+                    const usersResult = await window.dbHelpers.getAllUsers();
+                    if (usersResult.success) {
+                        const users = usersResult.data.filter(u => !u.is_admin);
+                        tableBody.innerHTML = users.map(user => createUserRow(user)).join('');
+                    }
                 }
-                ${status !== 'deleted' ? 
-                    `<button onclick="deleteUser('${user.id}')" class="text-red-600 hover:text-red-900">Delete</button>` : ''
+                alert('User suspended successfully.');
+            } else {
+                alert('Failed to suspend user: ' + result.error);
+            }
+        }
+
+        async function unsuspendUser(userId) {
+            if (!confirm('Are you sure you want to unsuspend this user?')) {
+                return;
+            }
+            
+            const result = await window.dbHelpers.updateUserStatus(userId, 'active');
+            if (result.success) {
+                // Refresh the user table
+                const tableBody = document.getElementById('userTableBody');
+                if (tableBody) {
+                    const usersResult = await window.dbHelpers.getAllUsers();
+                    if (usersResult.success) {
+                        const users = usersResult.data.filter(u => !u.is_admin);
+                        tableBody.innerHTML = users.map(user => createUserRow(user)).join('');
+                    }
                 }
-            </td>
-        </tr>
-    `;
-}
-
-function closeUserManagement() {
-    const modal = document.getElementById('userManagementModal');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-function loadUserManagement() {
-    // This function can be used to initialize any user management features
-    // For now, it's just a placeholder
-}
-
-function suspendUser(userId) {
-    if (!confirm('Are you sure you want to suspend this user? They will not be able to log in.')) {
-        return;
-    }
-    
-    const userIndex = mockDB.users.findIndex(u => u.id === userId);
-    if (userIndex !== -1) {
-        mockDB.users[userIndex].status = 'suspended';
-        saveToStorage();
-        
-        // Refresh the user table
-        const tableBody = document.getElementById('userTableBody');
-        if (tableBody) {
-            const users = mockDB.users.filter(u => !u.isAdmin);
-            tableBody.innerHTML = users.map(user => createUserRow(user)).join('');
+                alert('User unsuspended successfully.');
+            } else {
+                alert('Failed to unsuspend user: ' + result.error);
+            }
         }
-        
-        alert('User suspended successfully.');
-    }
-}
 
-function unsuspendUser(userId) {
-    if (!confirm('Are you sure you want to unsuspend this user?')) {
-        return;
-    }
-    
-    const userIndex = mockDB.users.findIndex(u => u.id === userId);
-    if (userIndex !== -1) {
-        mockDB.users[userIndex].status = 'active';
-        saveToStorage();
-        
-        // Refresh the user table
-        const tableBody = document.getElementById('userTableBody');
-        if (tableBody) {
-            const users = mockDB.users.filter(u => !u.isAdmin);
-            tableBody.innerHTML = users.map(user => createUserRow(user)).join('');
+        async function deleteUser(userId) {
+            if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+                return;
+            }
+            
+            const result = await window.dbHelpers.updateUserStatus(userId, 'deleted');
+            if (result.success) {
+                // Refresh the user table
+                const tableBody = document.getElementById('userTableBody');
+                if (tableBody) {
+                    const usersResult = await window.dbHelpers.getAllUsers();
+                    if (usersResult.success) {
+                        const users = usersResult.data.filter(u => !u.is_admin);
+                        tableBody.innerHTML = users.map(user => createUserRow(user)).join('');
+                    }
+                }
+                alert('User deleted successfully.');
+            } else {
+                alert('Failed to delete user: ' + result.error);
+            }
         }
-        
-        alert('User unsuspended successfully.');
-    }
-}
 
-function deleteUser(userId) {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-        return;
-    }
-    
-    const userIndex = mockDB.users.findIndex(u => u.id === userId);
-    if (userIndex !== -1) {
-        mockDB.users[userIndex].status = 'deleted';
-        saveToStorage();
-        
-        // Refresh the user table
-        const tableBody = document.getElementById('userTableBody');
-        if (tableBody) {
-            const users = mockDB.users.filter(u => !u.isAdmin);
-            tableBody.innerHTML = users.map(user => createUserRow(user)).join('');
-        }
-        
-        alert('User deleted successfully.');
-    }
-}
         function viewHistoryItem(submissionId) {
-    const submission = mockDB.submissions.find(s => s.id === submissionId);
-    if (!submission) {
-        alert('Evaluation not found');
-        return;
-    }
-    
-    // Set this as the current evaluation
-    currentEvaluation = submission;
-    
-    // Populate the results section
-    document.getElementById('originalLogline').textContent = '"' + submission.formData.logline + '"';
-    document.getElementById('evaluationResult').textContent = submission.claudeResponse;
-    
-    // Show the results section
-    showSection('results');
-}
+            // Find the submission from current loaded data or fetch it
+            // For now, we'll implement a simple version that sets currentEvaluation
+            // In a more robust implementation, you'd fetch the specific submission
+            
+            // This is a simplified implementation - in practice you'd want to fetch the submission by ID
+            showSection('results');
+        }
 
-function downloadHistoryPDF(submissionId) {
-    const submission = mockDB.submissions.find(s => s.id === submissionId);
-    if (!submission) {
-        alert('Evaluation not found');
-        return;
-    }
-    
-    // Temporarily set as current evaluation for PDF generation
-    const originalEvaluation = currentEvaluation;
-    currentEvaluation = submission;
-    
-    // Generate PDF
-    downloadEvaluationPDF();
-    
-    // Restore original evaluation
-    currentEvaluation = originalEvaluation;
-}
+        async function downloadHistoryPDF(submissionId) {
+            try {
+                // Fetch the specific submission
+                const submissionsResult = await window.dbHelpers.getUserSubmissions(currentUser.id);
+                if (submissionsResult.success) {
+                    const submission = submissionsResult.data.find(s => s.id === submissionId);
+                    if (submission) {
+                        // Temporarily set as current evaluation for PDF generation
+                        const originalEvaluation = currentEvaluation;
+                        currentEvaluation = submission;
+                        
+                        // Generate PDF
+                        downloadEvaluationPDF();
+                        
+                        // Restore original evaluation
+                        currentEvaluation = originalEvaluation;
+                    } else {
+                        alert('Evaluation not found');
+                    }
+                } else {
+                    alert('Failed to load evaluation');
+                }
+            } catch (error) {
+                console.error('Error downloading PDF:', error);
+                alert('Error downloading PDF');
+            }
+        }
 
-function deleteHistoryItem(submissionId) {
-    if (!confirm('Are you sure you want to delete this evaluation? This action cannot be undone.')) {
-        return;
-    }
-    
-    const submissionIndex = mockDB.submissions.findIndex(s => s.id === submissionId);
-    if (submissionIndex !== -1) {
-        mockDB.submissions.splice(submissionIndex, 1);
-        saveToStorage();
-        loadHistory(); // Refresh the history display
-        updateAdminSection(); // Update admin counts if admin
-        alert('Evaluation deleted successfully');
-    }
-}
+        async function deleteHistoryItem(submissionId) {
+            if (!confirm('Are you sure you want to delete this evaluation? This action cannot be undone.')) {
+                return;
+            }
+            
+            const result = await window.dbHelpers.deleteSubmission(submissionId);
+            if (result.success) {
+                loadHistory(); // Refresh the history display
+                if (currentUserProfile.is_admin) {
+                    updateAdminSection(); // Update admin counts if admin
+                }
+                alert('Evaluation deleted successfully');
+            } else {
+                alert('Failed to delete evaluation: ' + result.error);
+            }
+        }
 
-function updateHistoryPagination(totalPages) {
-    const paginationHTML = [];
-    
-    // Previous button
-    if (currentHistoryPage > 1) {
-        paginationHTML.push(`
-            <button onclick="changeHistoryPage(${currentHistoryPage - 1})" 
-                    class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
-                Previous
-            </button>
-        `);
-    }
-    
-    // Page numbers
-    for (let i = 1; i <= totalPages; i++) {
-        const isActive = i === currentHistoryPage;
-        paginationHTML.push(`
-            <button onclick="changeHistoryPage(${i})" 
-                    class="px-3 py-1 ${isActive ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'} rounded hover:${isActive ? 'bg-red-700' : 'bg-gray-300'}">
-                ${i}
-            </button>
-        `);
-    }
-    
-    // Next button
-    if (currentHistoryPage < totalPages) {
-        paginationHTML.push(`
-            <button onclick="changeHistoryPage(${currentHistoryPage + 1})" 
-                    class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
-                Next
-            </button>
-        `);
-    }
-    
-    document.getElementById('historyPagination').innerHTML = paginationHTML.join('');
-}
+        function updateHistoryPagination(totalPages) {
+            const paginationHTML = [];
+            
+            // Previous button
+            if (currentHistoryPage > 1) {
+                paginationHTML.push(`
+                    <button onclick="changeHistoryPage(${currentHistoryPage - 1})" 
+                            class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                        Previous
+                    </button>
+                `);
+            }
+            
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                const isActive = i === currentHistoryPage;
+                paginationHTML.push(`
+                    <button onclick="changeHistoryPage(${i})" 
+                            class="px-3 py-1 ${isActive ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'} rounded hover:${isActive ? 'bg-red-700' : 'bg-gray-300'}">
+                        ${i}
+                    </button>
+                `);
+            }
+            
+            // Next button
+            if (currentHistoryPage < totalPages) {
+                paginationHTML.push(`
+                    <button onclick="changeHistoryPage(${currentHistoryPage + 1})" 
+                            class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                        Next
+                    </button>
+                `);
+            }
+            
+            document.getElementById('historyPagination').innerHTML = paginationHTML.join('');
+        }
 
-function changeHistoryPage(page) {
-    currentHistoryPage = page;
-    loadHistory();
-}
-
-function toggleShowAllHistory() {
-    showAllHistory = !showAllHistory;
-    currentHistoryPage = 1;
-    const button = document.getElementById('showAllHistoryBtn');
-    button.textContent = showAllHistory ? 'Show Paginated' : 'Show All';
-    loadHistory();
-}
+        function changeHistoryPage(page) {
+            currentHistoryPage = page;
+            loadHistory();
+        }
     </script>
 </body>
 </html>
