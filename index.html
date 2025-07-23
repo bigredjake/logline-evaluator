@@ -923,114 +923,82 @@ if (status === 'deleted') {
             }
         }
 
-    async function login(email, password) {
+        async function login(email, password) {
     setLoading(true);
     
-    try {
-        // Sign in with Supabase
-        const authResult = await window.authHelpers.signIn(email, password);
-        
-        if (!authResult.success) {
-            alert('Invalid email or password');
-            setLoading(false);
-            return;
-        }
-
-        // Get user profile from database
-        const userId = authResult.data.user.id;
-        const profileResult = await window.dbHelpers.getUserProfile(userId);
-        
-        if (!profileResult.success) {
-            alert('Error loading user profile');
-            setLoading(false);
-            return;
-        }
-
-        const userProfile = profileResult.data;
-
+    const hashedPassword = hashPassword(password);
+    const user = mockDB.users.find(function(u) { 
+        return u.email === email && u.password === hashedPassword; 
+    });
+    
+    if (user) {
         // Check if user is suspended or deleted
-        if (userProfile.status === 'suspended') {
-            await window.authHelpers.signOut();
+        const status = user.status || 'active';
+        if (status === 'suspended') {
             alert('Your account has been suspended. Please contact support.');
             setLoading(false);
             return;
         }
-        if (userProfile.status === 'deleted') {
-            await window.authHelpers.signOut();
+        if (status === 'deleted') {
             alert('This account no longer exists. Please contact support.');
             setLoading(false);
             return;
         }
-
-        // Set current user and show app
-        currentUser = userProfile;
+        
+        currentUser = user;
+        saveToStorage();
         showApp();
-        setLoading(false);
-
-    } catch (error) {
-        console.error('Login error:', error);
-        alert('Login failed. Please try again.');
-        setLoading(false);
+    } else {
+        alert('Invalid email or password');
     }
+    
+    setLoading(false);
 }
 
-       async function register(email, password, studentCode) {
-    setLoading(true);
-    
-    try {
-        // First, create auth user with Supabase
-        const authResult = await window.authHelpers.signUp(email, password);
-        
-        if (!authResult.success) {
-            alert('Registration failed: ' + authResult.error);
-            setLoading(false);
-            return;
-        }
-
-        // User will be automatically logged in after signup
-        const userId = authResult.data.user.id;
-        let userType = 'credits';
-        let accessExpiry = null;
-
-        // Handle student code if provided
-        if (studentCode) {
-            const codeResult = await window.dbHelpers.getStudentCode(studentCode);
+        async function register(email, password, studentCode) {
+            setLoading(true);
             
-            if (!codeResult.success) {
-                alert('Invalid or already used student code');
-                setLoading(false);
-                return;
+            let userType = 'credits';
+            let credits = 0;
+            let accessExpiry = null;
+
+            if (studentCode) {
+                const code = mockDB.studentCodes.find(function(c) { 
+                    return c.code === studentCode && !c.used; 
+                });
+                if (code) {
+                    userType = 'student';
+                    const expiry = new Date();
+                    expiry.setMonth(expiry.getMonth() + code.months);
+                    accessExpiry = expiry.toISOString();
+
+                    code.used = true;
+                    code.usedBy = email;
+                    code.usedAt = new Date().toISOString();
+                } else {
+                    alert('Invalid or already used student code');
+                    setLoading(false);
+                    return;
+                }
             }
 
-            const code = codeResult.data;
-            
-            if (code.code_type === 'time_based') {
-                userType = 'student';
-                const expiry = new Date();
-                expiry.setMonth(expiry.getMonth() + code.months);
-                accessExpiry = expiry.toISOString();
-            } else if (code.code_type === 'credit_based') {
-                userType = 'credits';
-                // Credits will be added to profile
-            }
+            const newUser = {
+                id: Date.now().toString(),
+                email: email,
+                password: hashPassword(password),
+                userType: userType,
+                credits: credits,
+                accessExpiry: accessExpiry,
+                createdAt: new Date().toISOString(),
+                isAdmin: ['jacob@bigredstripe.com'].includes(email)
+            };
 
-            // Mark code as used
-            await window.dbHelpers.useStudentCode(studentCode, userId);
-        }
-
-        // The user profile is automatically created by the database trigger
-        // Just wait a moment for it to be created, then redirect
-        setTimeout(() => {
+            mockDB.users.push(newUser);
+            currentUser = newUser;
+            saveToStorage();
             showApp();
             setLoading(false);
-        }, 1000);
-
-    } catch (error) {
-        console.error('Registration error:', error);
-        alert('Registration failed. Please try again.');
-        setLoading(false);
-    }
-}
+        }
 
         function setLoading(loading) {
             isLoading = loading;
@@ -1778,27 +1746,24 @@ if (hashedCurrentPassword !== currentUser.password) {
     document.body.removeChild(link);
 }
 
-        async function logout() {
-    // Sign out from Supabase
-    await window.authHelpers.signOut();
-    
-    currentUser = null;
-    currentView = 'login';
-    currentEvaluation = null;
-    
-    document.getElementById('appSection').classList.add('hidden');
-    document.getElementById('authSection').classList.remove('hidden');
-    
-    document.getElementById('authEmail').value = '';
-    document.getElementById('authPassword').value = '';
-    document.getElementById('confirmPassword').value = '';
-    document.getElementById('studentCode').value = '';
-    
-    if (currentView !== 'login') {
-        toggleAuthMode();
-    }
-}
-        
+        function logout() {
+            localStorage.removeItem('brs_user');
+            currentUser = null;
+            currentView = 'login';
+            currentEvaluation = null;
+            
+            document.getElementById('appSection').classList.add('hidden');
+            document.getElementById('authSection').classList.remove('hidden');
+            
+            document.getElementById('authEmail').value = '';
+            document.getElementById('authPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('studentCode').value = '';
+            
+            if (currentView !== 'login') {
+                toggleAuthMode();
+            }
+        }
         async function handlePaymentSuccess(sessionId, userId, expectedAmount) {
             try {
                 // Show loading state

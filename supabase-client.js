@@ -2,14 +2,14 @@
 // This file handles all database connections and operations
 
 // Import Supabase client library
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js';
 
 // Initialize Supabase client with environment variables
 const supabaseUrl = window.location.hostname === 'localhost' 
     ? 'https://brs-logline-evaluator.supabase.co'  // Fallback for local development
     : 'https://brs-logline-evaluator.supabase.co';
 
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlcHRsa3V0d2xsd2h5ZmllYmNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwOTUyNTEsImV4cCI6MjA2ODY3MTI1MX0.UyjjISjobu3JyQTDUALbwoulPltoSPRrI4l9FePOMVc';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJycy1sb2dsaW5lLWV2YWx1YXRvciIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzUzMjAyNDI3LCJleHAiOjIwNjg3Nzg0Mjd9.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'; // We'll replace this
 
 // Create Supabase client
 const supabase = createClient(supabaseUrl, supabaseKey);
