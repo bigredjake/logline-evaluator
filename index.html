@@ -852,14 +852,15 @@ async function updatePasswordFromReset(token) {
             setLoading(false);
         }
 
-        async function register(email, password, studentCode) {
+    async function register(email, password, studentCode) {
             setLoading(true);
             
             try {
-                // First check if student code is valid (if provided)
+                // Step 1: Validate student code first (if provided)
                 let userType = 'credits';
                 let accessExpiry = null;
                 let credits = 0;
+                let validatedCode = null;
                 
                 if (studentCode) {
                     const codeResult = await window.dbHelpers.getStudentCode(studentCode);
@@ -870,53 +871,84 @@ async function updatePasswordFromReset(token) {
                     }
                     
                     // Valid code found
+                    validatedCode = codeResult.data;
                     userType = 'student';
                     const expiry = new Date();
-                    expiry.setMonth(expiry.getMonth() + codeResult.data.months);
+                    expiry.setMonth(expiry.getMonth() + validatedCode.months);
                     accessExpiry = expiry.toISOString();
                 }
                 
-                // Create auth user
+                // Step 2: Create auth user
                 const authResult = await window.authHelpers.signUp(email, password);
                 
-                if (authResult.success && authResult.data.user) {
-                    // Check if user is admin
-                    const isAdmin = email === 'jacob@bigredstripe.com';
-                    
-                    if (isAdmin) {
-                        userType = 'admin';
-                        credits = 999999;
-                        accessExpiry = null;
-                    }
-                    
-                    // Create user profile
-                    const profileResult = await window.dbHelpers.createUserProfile(
-                        authResult.data.user.id,
-                        email,
-                        userType,
-                        isAdmin
-                    );
-                    
-                    if (profileResult.success) {
-                        // If student code was used, mark it as used
-                        if (studentCode && userType === 'student') {
-                            await window.dbHelpers.useStudentCode(studentCode, authResult.data.user.id);
-                        }
-                        
-                        currentUser = authResult.data.user;
-                        currentUserProfile = profileResult.data;
-                        
-                        alert('Account created successfully!');
-                        showApp();
-                    } else {
-                        alert('Failed to create user profile: ' + profileResult.error);
-                    }
-                } else {
+                if (!authResult.success) {
                     alert('Failed to create account: ' + authResult.error);
+                    setLoading(false);
+                    return;
                 }
+                
+                // Check if user was actually created
+                if (!authResult.data.user) {
+                    alert('Account creation failed - no user returned from authentication service');
+                    setLoading(false);
+                    return;
+                }
+                
+                const newUserId = authResult.data.user.id;
+                const newUserEmail = authResult.data.user.email;
+                
+                // Step 3: Determine if user should be admin
+                const isAdmin = newUserEmail === 'jacob@bigredstripe.com';
+                
+                if (isAdmin) {
+                    userType = 'admin';
+                    credits = 999999;
+                    accessExpiry = null;
+                }
+                
+                // Step 4: Create user profile
+                const profileResult = await window.dbHelpers.createUserProfile(
+                    newUserId,
+                    newUserEmail,
+                    userType,
+                    isAdmin
+                );
+                
+                if (!profileResult.success) {
+                    // Profile creation failed - we need to clean up the auth user
+                    console.error('Profile creation failed:', profileResult.error);
+                    
+                    // Try to delete the auth user to prevent orphaned records
+                    await window.authHelpers.signOut();
+                    
+                    alert('Account setup failed. Please try again. Error: ' + profileResult.error);
+                    setLoading(false);
+                    return;
+                }
+                
+                // Step 5: If student code was used, mark it as used
+                if (validatedCode && userType === 'student') {
+                    const codeUseResult = await window.dbHelpers.useStudentCode(studentCode, newUserId);
+                    if (!codeUseResult.success) {
+                        // Code marking failed, but account is created - just log warning
+                        console.warn('Failed to mark student code as used:', codeUseResult.error);
+                    }
+                }
+                
+                // Step 6: Set current user data
+                currentUser = authResult.data.user;
+                currentUserProfile = profileResult.data;
+                
+                // Step 7: Success!
+                alert('Account created successfully! Welcome to the Logline Evaluator.');
+                showApp();
+                
             } catch (error) {
                 console.error('Registration error:', error);
                 alert('Registration failed: ' + error.message);
+                
+                // Try to clean up any partial state
+                await window.authHelpers.signOut();
             }
             
             setLoading(false);
