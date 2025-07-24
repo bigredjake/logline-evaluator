@@ -425,11 +425,33 @@
                 </div>
             </div>
 
-            <!-- Purchase Section -->
+         <!-- Purchase Section -->
             <div id="purchaseSection" class="hidden max-w-4xl mx-auto px-6 py-8">
                 <div class="bg-white rounded-lg shadow-lg p-8">
                     <h2 class="text-3xl font-bold text-black mb-6">Purchase Credits</h2>
-                    <p class="text-gray-600 mb-8">Choose a credit package to evaluate your loglines.</p>
+                    <p class="text-gray-600 mb-8">Choose a credit package to evaluate your loglines, or redeem a student code.</p>
+
+                    <!-- Student Code Redemption Section -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+                        <h3 class="text-lg font-semibold text-blue-900 mb-4">Have a Student Code?</h3>
+                        <p class="text-blue-700 mb-4">If you have a student code, enter it below to get free access or credits!</p>
+                        <div class="flex space-x-3">
+                            <input type="text" id="paymentPageStudentCode" placeholder="Enter your student code" 
+                                   class="flex-1 px-4 py-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <button id="redeemCodeBtn" class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                                Redeem Code
+                            </button>
+                        </div>
+                        <div id="codeRedemptionResult" class="mt-3 hidden"></div>
+                    </div>
+
+                    <div class="text-center text-gray-500 mb-8">
+                        <div class="flex items-center">
+                            <div class="flex-1 border-t border-gray-300"></div>
+                            <span class="px-4 text-sm">OR</span>
+                            <div class="flex-1 border-t border-gray-300"></div>
+                        </div>
+                    </div>
 
                  <div id="betaDiscount" class="hidden bg-green-50 border border-green-200 rounded-lg p-4 mb-10 text-center">
     <h3 class="text-green-800 font-bold text-lg">🎉 Beta Adopter Discount!</h3>
@@ -474,8 +496,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
     <script>
         // Initialize Stripe (you'll need to replace with your actual key)
@@ -653,6 +673,7 @@ if (portalReturn === 'return') {
             document.getElementById('downloadCodesBtn').addEventListener('click', downloadCodes);
             document.getElementById('downloadAllSubmissionsBtn').addEventListener('click', downloadAllSubmissions);
             document.getElementById('viewUsersBtn').addEventListener('click', viewAllUsers);
+            document.getElementById('redeemCodeBtn').addEventListener('click', redeemStudentCode);
 
             // Password strength listeners
             document.getElementById('authPassword').addEventListener('input', function() {
@@ -2100,6 +2121,117 @@ async function generateStudentCodes() {
         function changeHistoryPage(page) {
             currentHistoryPage = page;
             loadHistory();
+        }
+
+        // Student code redemption on payment page
+        async function redeemStudentCode() {
+            const codeInput = document.getElementById('paymentPageStudentCode');
+            const redeemButton = document.getElementById('redeemCodeBtn');
+            const resultDiv = document.getElementById('codeRedemptionResult');
+            
+            const studentCode = codeInput.value.trim();
+            
+            if (!studentCode) {
+                showCodeResult('Please enter a student code', 'error');
+                return;
+            }
+            
+            // Show loading state
+            redeemButton.disabled = true;
+            redeemButton.textContent = 'Redeeming...';
+            
+            try {
+                // Validate the code
+                const codeResult = await window.dbHelpers.getStudentCode(studentCode);
+                
+                if (!codeResult.success) {
+                    showCodeResult('Invalid or already used student code', 'error');
+                    return;
+                }
+                
+                const validatedCode = codeResult.data;
+                
+                // Process the code based on type
+                if (validatedCode.code_type === 'credit_based') {
+                    // Add credits to current user
+                    const newCredits = currentUserProfile.credits + validatedCode.credits;
+                    const updateResult = await window.dbHelpers.updateUserCredits(currentUser.id, newCredits);
+                    
+                    if (updateResult.success) {
+                        // Mark code as used
+                        await window.dbHelpers.useStudentCode(studentCode, currentUser.id);
+                        
+                        // Update local profile
+                        currentUserProfile.credits = newCredits;
+                        updateUI();
+                        
+                        showCodeResult(`Success! ${validatedCode.credits} credits added to your account.`, 'success');
+                        codeInput.value = '';
+                        
+                        // If user now has credits, redirect to logline page
+                        setTimeout(() => {
+                            showSection('logline');
+                        }, 2000);
+                    } else {
+                        showCodeResult('Failed to add credits. Please try again.', 'error');
+                    }
+                    
+                } else {
+                    // Time-based code - convert user to student
+                    const expiry = new Date();
+                    expiry.setMonth(expiry.getMonth() + validatedCode.months);
+                    
+                    const updateResult = await window.supabase
+                        .from('user_profiles')
+                        .update({
+                            user_type: 'student',
+                            access_expiry: expiry.toISOString()
+                        })
+                        .eq('id', currentUser.id)
+                        .select()
+                        .single();
+                    
+                    if (!updateResult.error) {
+                        // Mark code as used
+                        await window.dbHelpers.useStudentCode(studentCode, currentUser.id);
+                        
+                        // Update local profile
+                        currentUserProfile = updateResult.data;
+                        updateUI();
+                        
+                        showCodeResult(`Success! You now have ${validatedCode.months} months of unlimited access.`, 'success');
+                        codeInput.value = '';
+                        
+                        // Redirect to logline page
+                        setTimeout(() => {
+                            showSection('logline');
+                        }, 2000);
+                    } else {
+                        showCodeResult('Failed to activate student access. Please try again.', 'error');
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Code redemption error:', error);
+                showCodeResult('An error occurred. Please try again.', 'error');
+            } finally {
+                redeemButton.disabled = false;
+                redeemButton.textContent = 'Redeem Code';
+            }
+        }
+        
+        function showCodeResult(message, type) {
+            const resultDiv = document.getElementById('codeRedemptionResult');
+            resultDiv.className = `mt-3 p-3 rounded-lg ${type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`;
+            resultDiv.textContent = message;
+            resultDiv.classList.remove('hidden');
+            
+            // Auto-hide after 5 seconds for errors
+            if (type === 'error') {
+                setTimeout(() => {
+                    resultDiv.classList.add('hidden');
+                }, 5000);
+            }
         }
     </script>
 </body>
