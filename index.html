@@ -138,6 +138,36 @@
         </div>
     </div>
 
+<!-- Credit Confirmation Modal -->
+    <div id="creditConfirmModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
+                    <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 text-center mb-2">Confirm Evaluation</h3>
+                <p class="text-sm text-gray-600 text-center mb-6">
+                    Getting an evaluation will use <strong>1 credit</strong> from your account. 
+                    <br><br>
+                    You currently have <span id="modalCreditsRemaining" class="font-semibold text-blue-600"></span> credits remaining.
+                    <br><br>
+                    Are you ready to proceed?
+                </p>
+                <div class="flex space-x-3">
+                    <button id="cancelEvaluationBtn" class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors">
+                        Cancel
+                    </button>
+                    <button id="proceedEvaluationBtn" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                            style="background-color: #d9042b;">
+                        Proceed
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Main App Section -->
     <div id="appSection" class="hidden min-h-screen bg-gray-50">
         <!-- Header -->
@@ -675,6 +705,11 @@ if (portalReturn === 'return') {
             document.getElementById('downloadAllSubmissionsBtn').addEventListener('click', downloadAllSubmissions);
             document.getElementById('viewUsersBtn').addEventListener('click', viewAllUsers);
             document.getElementById('redeemCodeBtn').addEventListener('click', redeemStudentCode);
+            document.getElementById('cancelEvaluationBtn').addEventListener('click', hideCreditConfirmation);
+            document.getElementById('proceedEvaluationBtn').addEventListener('click', function() {
+                hideCreditConfirmation();
+                performEvaluation();
+            });
 
             // Password strength listeners
             document.getElementById('authPassword').addEventListener('input', function() {
@@ -1129,6 +1164,7 @@ async function updatePasswordFromReset(token) {
         }
 
         // Core App Functions
+       // Updated evaluateLogline function with credit confirmation
         async function evaluateLogline() {
             const formData = {
                 genre: document.getElementById('genre').value,
@@ -1155,6 +1191,39 @@ async function updatePasswordFromReset(token) {
                 alert('Your student access has expired. Please purchase credits to continue.');
                 showSection('purchase');
                 return;
+            }
+
+            // Show confirmation modal for credit users only
+            if (currentUserProfile.user_type === 'credits') {
+                showCreditConfirmation();
+                return;
+            }
+
+            // For admin and student users, proceed directly
+            performEvaluation(formData);
+        }
+
+        function showCreditConfirmation() {
+            document.getElementById('modalCreditsRemaining').textContent = currentUserProfile.credits;
+            document.getElementById('creditConfirmModal').classList.remove('hidden');
+        }
+
+        function hideCreditConfirmation() {
+            document.getElementById('creditConfirmModal').classList.add('hidden');
+        }
+
+        async function performEvaluation(formData) {
+            // If formData not provided, get it from the form
+            if (!formData) {
+                formData = {
+                    genre: document.getElementById('genre').value,
+                    tone: document.getElementById('tone').value,
+                    mainCharacter: document.getElementById('mainCharacter').value,
+                    antagonist: document.getElementById('antagonist').value,
+                    incitingIncident: document.getElementById('incitingIncident').value,
+                    storyDetails: document.getElementById('storyDetails').value,
+                    logline: document.getElementById('logline').value
+                };
             }
 
             const button = document.getElementById('evaluateBtn');
@@ -1230,7 +1299,7 @@ async function updatePasswordFromReset(token) {
                 spinner.classList.add('hidden');
             }
         }
-
+        
         function resetForm() {
             document.getElementById('genre').value = '';
             document.getElementById('tone').value = '';
