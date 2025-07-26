@@ -2369,43 +2369,38 @@ async function generateStudentCodes() {
             localStorage.setItem(`formData_${currentUser.id}`, JSON.stringify(formData));
         }
 
-     function loadUserFormData() {
-            if (!currentUser) return;
-
-           // DEBUG: Check what's happening
+  function loadUserFormData() {
+    if (!currentUser) return;
+    
+    // DEBUG: Check what's happening
     const startedFresh = localStorage.getItem(`startedFresh_${currentUser.id}`);
     const savedData = localStorage.getItem(`formData_${currentUser.id}`);
     console.log('Debug - startedFresh:', startedFresh, 'savedData exists:', !!savedData);
     
-    // ... rest of function stays the same
-         
-            // Check if user clicked "Start Fresh" - if so, don't load last submission
-            const startedFresh = localStorage.getItem(`startedFresh_${currentUser.id}`);
-            if (startedFresh) {
-                // Only load their in-progress work, never auto-load last submission
-                try {
-                    const savedData = localStorage.getItem(`formData_${currentUser.id}`);
-                    if (savedData) {
-                        const formData = JSON.parse(savedData);
-                        document.getElementById('genre').value = formData.genre || '';
-                        document.getElementById('tone').value = formData.tone || '';
-                        document.getElementById('mainCharacter').value = formData.mainCharacter || '';
-                        document.getElementById('antagonist').value = formData.antagonist || '';
-                        document.getElementById('incitingIncident').value = formData.incitingIncident || '';
-                        document.getElementById('storyDetails').value = formData.storyDetails || '';
-                        document.getElementById('logline').value = formData.logline || '';
-                    }
-                    // If no saved data, just leave fields empty - don't load last submission
-                } catch (error) {
-                    console.error('Error loading form data:', error);
-                }
-                return; // IMPORTANT: Exit here, don't load last submission
+    // Check if user clicked "Start Fresh" - if so, don't load last submission
+    if (startedFresh) {
+        // Only load their in-progress work, never auto-load last submission
+        try {
+            if (savedData) {
+                const formData = JSON.parse(savedData);
+                document.getElementById('genre').value = formData.genre || '';
+                document.getElementById('tone').value = formData.tone || '';
+                document.getElementById('mainCharacter').value = formData.mainCharacter || '';
+                document.getElementById('antagonist').value = formData.antagonist || '';
+                document.getElementById('incitingIncident').value = formData.incitingIncident || '';
+                document.getElementById('storyDetails').value = formData.storyDetails || '';
+                document.getElementById('logline').value = formData.logline || '';
             }
-            
-            // Only load from last submission if they haven't clicked "Start Fresh"
-            loadLastSubmissionData();
+            // If no saved data, just leave fields empty - don't load last submission
+        } catch (error) {
+            console.error('Error loading form data:', error);
         }
-
+        return; // IMPORTANT: Exit here, don't load last submission
+    }
+    
+    // Only load from last submission if they haven't clicked "Start Fresh"
+    loadLastSubmissionData();
+}
         function loadLastSubmissionManually() {
             if (!currentUser) return;
             
