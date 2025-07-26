@@ -1086,7 +1086,6 @@ async function updatePasswordFromReset(token) {
                 
     // ADD THIS LINE AT THE END:
     loadLastSubmissionData();
-    checkAndShowGettingStarted();
 }
 
         function showSection(section) {
@@ -1099,6 +1098,7 @@ async function updatePasswordFromReset(token) {
             if (section === 'logline') {
                 document.getElementById('loglineSection').classList.remove('hidden');
                 loadUserFormData();
+                checkAndShowGettingStarted();
             } else if (section === 'history') {
                 document.getElementById('historySection').classList.remove('hidden');
                 loadHistory();
@@ -2437,8 +2437,8 @@ async function generateStudentCodes() {
                                 </ol>
                                 
                                 <h4>Need Help?</h4>
-                                <p>Check out our <a href="#" onclick="closeModal('gettingStartedModal'); showFAQ();">FAQs</a> or contact us at <a href="mailto:support@bigredstripe.com">support@bigredstripe.com</a></p>
-                            </div>
+                                 <p>Check out our <a href="#" onclick="closeModal('gettingStartedModal'); showFAQ();" class="text-blue-600 hover:text-blue-800 underline">FAQs</a> or contact us at <a href="mailto:support@bigredstripe.com" class="text-blue-600 hover:text-blue-800 underline">support@bigredstripe.com</a></p>
+                              </div>
                         </div>
                     </div>
                 </div>
@@ -2710,9 +2710,9 @@ async function generateStudentCodes() {
                 <div>
                     <h3 class="text-lg font-semibold mb-4">Resources & Learning</h3>
                     <ul class="space-y-2">
-                        <li><a href="https://sales.bigredstripe.com/crucible/?video=LoglineEvaluatorLink" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition-colors">The Crucible</a></li>
-                        <li><a href="#" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition-colors">The Complete Guide to Story Structure</a></li>
-                        <li><a href="#" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition-colors">Get Weekly Screenwriting Tips</a></li>
+                       <li><a href="https://sales.bigredstripe.com/crucible/?website=LoglineEval_Footer" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition-colors">The Crucible</a></li>
+                        <li><a href="https://learn.bigredstripe.com/courses/the-complete-guide-to-story-structure?website=LoglineEval_Footer" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition-colors">The Complete Guide to Story Structure</a></li>
+                        <li><a href="https://learn.bigredstripe.com/pages/brs-newsletter?website=LoglineEval_Footer" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition-colors">Get Weekly Screenwriting Tips</a></li>
                     </ul>
                 </div>
             </div>
