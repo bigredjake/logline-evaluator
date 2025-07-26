@@ -1113,23 +1113,27 @@ async function updatePasswordFromReset(token) {
             }
         }
 
-        function updateUI() {
+       function updateUI() {
             if (!currentUserProfile) return;
 
             const userStatus = document.getElementById('userStatus');
             if (currentUserProfile.user_type === 'credits') {
                 userStatus.textContent = currentUserProfile.credits + ' credits remaining';
-                userStatus.className = 'text-sm font-medium text-blue-600';
+                userStatus.className = 'text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline';
+                userStatus.onclick = function() {
+                    showSection('purchase');
+                };
             } else if (currentUserProfile.user_type === 'student') {
                 const daysLeft = calculateDaysRemaining(currentUserProfile.access_expiry);
                 userStatus.textContent = daysLeft + ' days remaining';
                 userStatus.className = 'text-sm font-medium text-green-600';
+                userStatus.onclick = null;
             } else if (currentUserProfile.user_type === 'admin') {
                 userStatus.textContent = 'Unlimited access';
                 userStatus.className = 'text-sm font-medium text-purple-600';
+                userStatus.onclick = null;
             }
         }
-
         async function loadSettings() {
             document.getElementById('newEmail').value = currentUser.email;
             
