@@ -2676,9 +2676,13 @@ async function generateStudentCodes() {
                 modal.remove();
             }
         }
-        // Auto-show Getting Started for new users
+      // Auto-show Getting Started for new users (only once)
         function checkAndShowGettingStarted() {
             if (!currentUser || !currentUserProfile) return;
+            
+            // Check if they've already seen the Getting Started modal
+            const hasSeenGettingStarted = localStorage.getItem(`gettingStarted_${currentUser.id}`);
+            if (hasSeenGettingStarted) return;
             
             // Check if this is their first time (no submissions yet)
             window.dbHelpers.getUserSubmissions(currentUser.id).then(result => {
@@ -2686,7 +2690,9 @@ async function generateStudentCodes() {
                     // New user with no submissions - show Getting Started
                     setTimeout(() => {
                         showGettingStarted();
-                    }, 1000); // Small delay so they see the main app first
+                        // Mark as seen
+                        localStorage.setItem(`gettingStarted_${currentUser.id}`, 'true');
+                    }, 1000);
                 }
             });
         }
