@@ -194,10 +194,17 @@
             <div id="loglineSection" class="max-w-4xl mx-auto px-6 py-8">
                 <div class="bg-white rounded-lg shadow-lg p-8">
                     <div class="mb-8">
-                        <h2 class="text-3xl font-bold text-black mb-4">Get Logline Feedback</h2>
-                        <p class="text-gray-600 text-lg">
-                            Submit information in each of the fields. The more information you include, the better your results. You will get feedback on your logline, five improved alternatives, and some possible title suggestions.
-                        </p>
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h2 class="text-3xl font-bold text-black mb-4">Get Logline Feedback</h2>
+                                <p class="text-gray-600 text-lg">
+                                    Submit information in each of the fields. The more information you include, the better your results. You will get feedback on your logline, five improved alternatives, and some possible title suggestions.
+                                </p>
+                            </div>
+                            <button id="startFreshBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors ml-4 whitespace-nowrap">
+                                Start Fresh
+                            </button>
+                        </div>
                     </div>
 
                     <div class="space-y-6">
@@ -710,6 +717,7 @@ if (portalReturn === 'return') {
                 hideCreditConfirmation();
                 performEvaluation();
             });
+            document.getElementById('startFreshBtn').addEventListener('click', clearLoglineForm);
 
             // Password strength listeners
             document.getElementById('authPassword').addEventListener('input', function() {
@@ -1075,6 +1083,9 @@ async function updatePasswordFromReset(token) {
     }
     
     updateUI();
+                
+    // ADD THIS LINE AT THE END:
+    loadLastSubmissionData();
 }
 
         function showSection(section) {
@@ -1086,6 +1097,7 @@ async function updatePasswordFromReset(token) {
 
             if (section === 'logline') {
                 document.getElementById('loglineSection').classList.remove('hidden');
+                loadUserFormData();
             } else if (section === 'history') {
                 document.getElementById('historySection').classList.remove('hidden');
                 loadHistory();
@@ -1280,6 +1292,7 @@ async function updatePasswordFromReset(token) {
 
                 if (submissionResult.success) {
                     currentEvaluation = submissionResult.data;
+                    saveCurrentFormData();
                 } else {
                     console.error('Failed to save submission:', submissionResult.error);
                 }
@@ -2308,6 +2321,78 @@ async function generateStudentCodes() {
                 setTimeout(() => {
                     resultDiv.classList.add('hidden');
                 }, 5000);
+            }
+        }
+        // Form data persistence functions
+        function clearLoglineForm() {
+            document.getElementById('genre').value = '';
+            document.getElementById('tone').value = '';
+            document.getElementById('mainCharacter').value = '';
+            document.getElementById('antagonist').value = '';
+            document.getElementById('incitingIncident').value = '';
+            document.getElementById('storyDetails').value = '';
+            document.getElementById('logline').value = '';
+        }
+
+        function saveCurrentFormData() {
+            if (!currentUser) return;
+            
+            const formData = {
+                genre: document.getElementById('genre').value,
+                tone: document.getElementById('tone').value,
+                mainCharacter: document.getElementById('mainCharacter').value,
+                antagonist: document.getElementById('antagonist').value,
+                incitingIncident: document.getElementById('incitingIncident').value,
+                storyDetails: document.getElementById('storyDetails').value,
+                logline: document.getElementById('logline').value
+            };
+            
+            localStorage.setItem(`formData_${currentUser.id}`, JSON.stringify(formData));
+        }
+
+        function loadUserFormData() {
+            if (!currentUser) return;
+            
+            try {
+                const savedData = localStorage.getItem(`formData_${currentUser.id}`);
+                if (savedData) {
+                    const formData = JSON.parse(savedData);
+                    document.getElementById('genre').value = formData.genre || '';
+                    document.getElementById('tone').value = formData.tone || '';
+                    document.getElementById('mainCharacter').value = formData.mainCharacter || '';
+                    document.getElementById('antagonist').value = formData.antagonist || '';
+                    document.getElementById('incitingIncident').value = formData.incitingIncident || '';
+                    document.getElementById('storyDetails').value = formData.storyDetails || '';
+                    document.getElementById('logline').value = formData.logline || '';
+                }
+            } catch (error) {
+                console.error('Error loading form data:', error);
+            }
+        }
+
+        async function loadLastSubmissionData() {
+            if (!currentUser) return;
+            
+            try {
+                const submissionsResult = await window.dbHelpers.getUserSubmissions(currentUser.id);
+                if (submissionsResult.success && submissionsResult.data.length > 0) {
+                    // Get the most recent submission
+                    const lastSubmission = submissionsResult.data[0];
+                    const formData = lastSubmission.form_data;
+                    
+                    document.getElementById('genre').value = formData.genre || '';
+                    document.getElementById('tone').value = formData.tone || '';
+                    document.getElementById('mainCharacter').value = formData.mainCharacter || '';
+                    document.getElementById('antagonist').value = formData.antagonist || '';
+                    document.getElementById('incitingIncident').value = formData.incitingIncident || '';
+                    document.getElementById('storyDetails').value = formData.storyDetails || '';
+                    document.getElementById('logline').value = formData.logline || '';
+                    
+                    // Save this as current form data
+                    saveCurrentFormData();
+                }
+            } catch (error) {
+                console.error('Error loading last submission:', error);
             }
         }
     </script>
