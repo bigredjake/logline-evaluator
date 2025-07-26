@@ -201,14 +201,9 @@
                                     Submit information in each of the fields. The more information you include, the better your results. You will get feedback on your logline, five improved alternatives, and some possible title suggestions.
                                 </p>
                             </div>
-                           <div class="flex space-x-2 ml-4">
-                                <button id="startFreshBtn" onclick="clearLoglineForm()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors whitespace-nowrap">
-                                    Start Fresh
-                                </button>
-                                <button id="loadLastBtn" onclick="loadLastSubmissionManually()" class="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors whitespace-nowrap">
-                                    Load Last
-                                </button>
-                            </div>
+                            <button id="startFreshBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors ml-4 whitespace-nowrap">
+                                Start Fresh
+                            </button>
                         </div>
                     </div>
 
@@ -723,7 +718,6 @@ if (portalReturn === 'return') {
                 performEvaluation();
             });
             document.getElementById('startFreshBtn').addEventListener('click', clearLoglineForm);
-            document.getElementById('loadLastBtn').addEventListener('click', loadLastSubmissionManually);
 
             // Password strength listeners
             document.getElementById('authPassword').addEventListener('input', function() {
@@ -1069,7 +1063,7 @@ async function updatePasswordFromReset(token) {
             }
         }
 
-       function showApp() {
+        function showApp() {
     document.getElementById('authSection').classList.add('hidden');
     document.getElementById('appSection').classList.remove('hidden');
     
@@ -1089,10 +1083,9 @@ async function updatePasswordFromReset(token) {
     }
     
     updateUI();
-    
-    // FIX: Manually attach Start Fresh button events
-    document.getElementById('startFreshBtn').addEventListener('click', clearLoglineForm);
-    document.getElementById('loadLastBtn').addEventListener('click', loadLastSubmissionManually);
+                
+    // ADD THIS LINE AT THE END:
+    loadLastSubmissionData();
 }
 
         function showSection(section) {
@@ -2339,28 +2332,6 @@ async function generateStudentCodes() {
             }
         }
         // Form data persistence functions
-function clearLoglineForm() {
-        console.log('clearLoglineForm() called!');
-    
-    document.getElementById('genre').value = '';
-    document.getElementById('tone').value = '';
-    document.getElementById('mainCharacter').value = '';
-    document.getElementById('antagonist').value = '';
-    document.getElementById('incitingIncident').value = '';
-    document.getElementById('storyDetails').value = '';
-    document.getElementById('logline').value = '';
-    
-    if (currentUser) {
-        // Set flag to not load last submission
-        localStorage.setItem(`startedFresh_${currentUser.id}`, 'true');
-        // CLEAR the saved form data so it starts truly fresh
-        localStorage.removeItem(`formData_${currentUser.id}`);
-
-                // DEBUG: Verify it's actually cleared
-        const checkCleared = localStorage.getItem(`formData_${currentUser.id}`);
-        console.log('After removeItem, formData is:', checkCleared);
-    }
-}
         function clearLoglineForm() {
             document.getElementById('genre').value = '';
             document.getElementById('tone').value = '';
@@ -2369,23 +2340,14 @@ function clearLoglineForm() {
             document.getElementById('incitingIncident').value = '';
             document.getElementById('storyDetails').value = '';
             document.getElementById('logline').value = '';
-            
-            // Set flag to not load last submission
-            if (currentUser) {
-                localStorage.setItem(`startedFresh_${currentUser.id}`, 'true');
-            }
         }
 
         function saveCurrentFormData() {
-    if (!currentUser) return;
-    
-    // DEBUG: See what's calling this function
-    console.log('saveCurrentFormData called!', new Error().stack);
-    
-    const formData = {
-        genre: document.getElementById('genre').value,
-        tone: document.getElementById('tone').value,
-        // ... rest of function stays the same
+            if (!currentUser) return;
+            
+            const formData = {
+                genre: document.getElementById('genre').value,
+                tone: document.getElementById('tone').value,
                 mainCharacter: document.getElementById('mainCharacter').value,
                 antagonist: document.getElementById('antagonist').value,
                 incitingIncident: document.getElementById('incitingIncident').value,
@@ -2396,46 +2358,26 @@ function clearLoglineForm() {
             localStorage.setItem(`formData_${currentUser.id}`, JSON.stringify(formData));
         }
 
-  function loadUserFormData() {
-    if (!currentUser) return;
-    
-    // DEBUG: Check what's happening
-    const startedFresh = localStorage.getItem(`startedFresh_${currentUser.id}`);
-    const savedData = localStorage.getItem(`formData_${currentUser.id}`);
-  console.log('Debug - startedFresh:', startedFresh, 'savedData exists:', !!savedData);
-console.log('Debug - actual savedData:', savedData ? JSON.parse(savedData) : 'none');
-    
-    // Check if user clicked "Start Fresh" - if so, don't load last submission
-    if (startedFresh) {
-        // Only load their in-progress work, never auto-load last submission
-        try {
-            if (savedData) {
-                const formData = JSON.parse(savedData);
-                document.getElementById('genre').value = formData.genre || '';
-                document.getElementById('tone').value = formData.tone || '';
-                document.getElementById('mainCharacter').value = formData.mainCharacter || '';
-                document.getElementById('antagonist').value = formData.antagonist || '';
-                document.getElementById('incitingIncident').value = formData.incitingIncident || '';
-                document.getElementById('storyDetails').value = formData.storyDetails || '';
-                document.getElementById('logline').value = formData.logline || '';
-            }
-            // If no saved data, just leave fields empty - don't load last submission
-        } catch (error) {
-            console.error('Error loading form data:', error);
-        }
-        return; // IMPORTANT: Exit here, don't load last submission
-    }
-    
-    // Only load from last submission if they haven't clicked "Start Fresh"
-    loadLastSubmissionData();
-}
-        function loadLastSubmissionManually() {
+        function loadUserFormData() {
             if (!currentUser) return;
             
-            // Clear the "started fresh" flag and load last submission
-            localStorage.removeItem(`startedFresh_${currentUser.id}`);
-            loadLastSubmissionData();
+            try {
+                const savedData = localStorage.getItem(`formData_${currentUser.id}`);
+                if (savedData) {
+                    const formData = JSON.parse(savedData);
+                    document.getElementById('genre').value = formData.genre || '';
+                    document.getElementById('tone').value = formData.tone || '';
+                    document.getElementById('mainCharacter').value = formData.mainCharacter || '';
+                    document.getElementById('antagonist').value = formData.antagonist || '';
+                    document.getElementById('incitingIncident').value = formData.incitingIncident || '';
+                    document.getElementById('storyDetails').value = formData.storyDetails || '';
+                    document.getElementById('logline').value = formData.logline || '';
+                }
+            } catch (error) {
+                console.error('Error loading form data:', error);
+            }
         }
+
         async function loadLastSubmissionData() {
             if (!currentUser) return;
             
