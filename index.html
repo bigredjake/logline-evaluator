@@ -1283,19 +1283,29 @@ async function updatePasswordFromReset(token) {
                     }
                 }
 
-                // Save submission to database
-                const submissionResult = await window.dbHelpers.createSubmission(
-                    currentUser.id,
-                    formData,
-                    claudeResponse
-                );
+             // Save submission to database
+console.log('Attempting to save submission for user:', currentUser.id);
+console.log('Form data:', formData);
+console.log('Claude response length:', claudeResponse.length);
 
-                if (submissionResult.success) {
-                    currentEvaluation = submissionResult.data;
-                    saveCurrentFormData();
-                } else {
-                    console.error('Failed to save submission:', submissionResult.error);
-                }
+const submissionResult = await window.dbHelpers.createSubmission(
+    currentUser.id,
+    formData,
+    claudeResponse
+);
+
+console.log('Submission result:', submissionResult);
+
+           if (submissionResult.success) {
+    currentEvaluation = submissionResult.data;
+    
+    // Save form data after successful submission
+    saveCurrentFormData();
+    
+                console.log('Evaluation saved:', currentEvaluation); // Debug line
+            } else {
+                console.error('Failed to save submission:', submissionResult.error);
+            }
 
                 document.getElementById('originalLogline').textContent = '"' + formData.logline + '"';
                 document.getElementById('evaluationResult').textContent = claudeResponse;
