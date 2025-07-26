@@ -1069,7 +1069,7 @@ async function updatePasswordFromReset(token) {
             }
         }
 
-        function showApp() {
+       function showApp() {
     document.getElementById('authSection').classList.add('hidden');
     document.getElementById('appSection').classList.remove('hidden');
     
@@ -1089,6 +1089,10 @@ async function updatePasswordFromReset(token) {
     }
     
     updateUI();
+    
+    // FIX: Manually attach Start Fresh button events
+    document.getElementById('startFreshBtn').addEventListener('click', clearLoglineForm);
+    document.getElementById('loadLastBtn').addEventListener('click', loadLastSubmissionManually);
 }
 
         function showSection(section) {
