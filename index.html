@@ -1284,17 +1284,11 @@ async function updatePasswordFromReset(token) {
                 }
 
              // Save submission to database
-console.log('Attempting to save submission for user:', currentUser.id);
-console.log('Form data:', formData);
-console.log('Claude response length:', claudeResponse.length);
-
 const submissionResult = await window.dbHelpers.createSubmission(
     currentUser.id,
     formData,
     claudeResponse
 );
-
-console.log('Submission result:', submissionResult);
 
            if (submissionResult.success) {
     currentEvaluation = submissionResult.data;
@@ -1302,7 +1296,6 @@ console.log('Submission result:', submissionResult);
     // Save form data after successful submission
     saveCurrentFormData();
     
-                console.log('Evaluation saved:', currentEvaluation); // Debug line
             } else {
                 console.error('Failed to save submission:', submissionResult.error);
             }
