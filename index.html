@@ -1086,6 +1086,7 @@ async function updatePasswordFromReset(token) {
                 
     // ADD THIS LINE AT THE END:
     loadLastSubmissionData();
+    checkAndShowGettingStarted();
 }
 
         function showSection(section) {
@@ -2398,6 +2399,336 @@ async function generateStudentCodes() {
                 console.error('Error loading last submission:', error);
             }
         }
-    </script>
+
+        // Footer navigation functions
+        function showGettingStarted() {
+            // Create Getting Started modal
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="gettingStartedModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                    <div class="relative top-8 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+                        <div class="mt-3">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-bold text-gray-900">Getting Started with the Logline Evaluator</h2>
+                                <button onclick="closeModal('gettingStartedModal')" class="text-gray-400 hover:text-gray-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="prose max-w-none">
+                                <h3>Welcome to the BRS Labs Logline Evaluator!</h3>
+                                <p>This tool helps you craft compelling loglines that grab Hollywood's attention. Here's how to get the most out of it:</p>
+                                
+                                <h4>Tips for Better Results:</h4>
+                                <ul>
+                                    <li><strong>Be specific:</strong> The more detail you provide in each field, the better your evaluation will be</li>
+                                    <li><strong>Focus on conflict:</strong> Clearly describe what your protagonist wants and what's stopping them</li>
+                                    <li><strong>Show the stakes:</strong> What happens if your protagonist fails?</li>
+                                    <li><strong>Include unique elements:</strong> What makes your story different from others in the genre?</li>
+                                </ul>
+                                
+                                <h4>How It Works:</h4>
+                                <ol>
+                                    <li>Fill out all the form fields with information about your story</li>
+                                    <li>Enter your current logline</li>
+                                    <li>Click "Get My Evaluation" to receive detailed feedback</li>
+                                    <li>Review the suggestions and download your results as a PDF</li>
+                                    <li>Refine your logline and run it through again for even better results</li>
+                                </ol>
+                                
+                                <h4>Need Help?</h4>
+                                <p>Check out our <a href="#" onclick="closeModal('gettingStartedModal'); showFAQ();">FAQs</a> or contact us at <a href="mailto:support@bigredstripe.com">support@bigredstripe.com</a></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+
+        function showFAQ() {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="faqModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                    <div class="relative top-8 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+                        <div class="mt-3">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-bold text-gray-900">Frequently Asked Questions</h2>
+                                <button onclick="closeModal('faqModal')" class="text-gray-400 hover:text-gray-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="space-y-6">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-2">How does the credit system work?</h3>
+                                    <p class="text-gray-700">Each evaluation uses one credit. Credits never expire, so you can use them whenever you're ready. You can purchase more credits anytime from the Purchase page.</p>
+                                </div>
+                                
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Can I get a refund?</h3>
+                                    <p class="text-gray-700">Yes! We offer refunds based on usage: 100% refund if no evaluations used, 50% refund for 1-5 evaluations, no refund for 6+ evaluations. Requests must be made within 30 days of purchase.</p>
+                                </div>
+                                
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-2">What makes a good logline?</h3>
+                                    <p class="text-gray-700">A strong logline is concise (1-2 sentences), includes your protagonist, the central conflict, and the stakes. It should give a clear sense of genre and make the reader want to know what happens next.</p>
+                                </div>
+                                
+                                <div class="border-t pt-4">
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Need More Help?</h3>
+                                    <p class="text-gray-700">For additional questions or technical support, please contact us at <a href="mailto:support@bigredstripe.com" class="text-blue-600 hover:text-blue-800">support@bigredstripe.com</a></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+
+        function showPrivacyPolicy() {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="privacyModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                    <div class="relative top-8 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+                        <div class="mt-3">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-bold text-gray-900">Privacy Policy</h2>
+                                <button onclick="closeModal('privacyModal')" class="text-gray-400 hover:text-gray-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="prose max-w-none text-sm">
+                                <p><strong>Effective Date:</strong> [Date]</p>
+                                <p><strong>Last Updated:</strong> [Date]</p>
+                                
+                                <h3>1. Information We Collect</h3>
+                                <p>We collect information you provide directly to us, including:</p>
+                                <ul>
+                                    <li>Account information (email address, password)</li>
+                                    <li>Form submissions (loglines, story details, genre information)</li>
+                                    <li>Payment information (processed securely through Stripe)</li>
+                                    <li>Usage analytics and login information</li>
+                                </ul>
+                                
+                                <h3>2. How We Use Your Information</h3>
+                                <p>We use the information we collect to:</p>
+                                <ul>
+                                    <li>Provide and improve our logline evaluation service</li>
+                                    <li>Process payments and manage your account</li>
+                                    <li>Send service-related communications</li>
+                                    <li>Analyze usage patterns to improve our service</li>
+                                </ul>
+                                
+                                <h3>3. Information Sharing</h3>
+                                <p>We share your information with third-party service providers:</p>
+                                <ul>
+                                    <li>Supabase (database hosting)</li>
+                                    <li>Stripe (payment processing)</li>
+                                    <li>Anthropic (AI evaluation service)</li>
+                                    <li>EmailJS (email communications)</li>
+                                    <li>Netlify (web hosting)</li>
+                                </ul>
+                                
+                                <h3>4. Data Security</h3>
+                                <p>We implement appropriate security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.</p>
+                                
+                                <h3>5. Data Retention</h3>
+                                <p>We retain your information indefinitely until you request account deletion. You may request deletion of your account and data by contacting us.</p>
+                                
+                                <h3>6. Contact Us</h3>
+                                <p>If you have questions about this Privacy Policy, please contact us at:</p>
+                                <p>BRS Labs, LLC<br>
+                                5627 Kanan Rd., Ste. 280<br>
+                                Agoura Hills, CA 91301<br>
+                                Email: support@bigredstripe.com</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+
+        function showTermsOfService() {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="termsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                    <div class="relative top-8 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+                        <div class="mt-3">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-bold text-gray-900">Terms of Service</h2>
+                                <button onclick="closeModal('termsModal')" class="text-gray-400 hover:text-gray-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="prose max-w-none text-sm">
+                                <p><strong>Effective Date:</strong> [Date]</p>
+                                <p><strong>Last Updated:</strong> [Date]</p>
+                                
+                                <h3>1. Acceptance of Terms</h3>
+                                <p>By accessing and using the BRS Labs Logline Evaluator service, you accept and agree to be bound by these Terms of Service.</p>
+                                
+                                <h3>2. Description of Service</h3>
+                                <p>BRS Labs provides an AI-powered logline evaluation service that analyzes and provides feedback on screenplay loglines.</p>
+                                
+                                <h3>3. User Accounts</h3>
+                                <p>You are responsible for maintaining the confidentiality of your account and password. You agree to accept responsibility for all activities under your account.</p>
+                                
+                                <h3>4. Payment Terms</h3>
+                                <p>Credits are required to use the evaluation service. Credits never expire. Payment is processed securely through Stripe. All sales are final subject to our refund policy.</p>
+                                
+                                <h3>5. Acceptable Use</h3>
+                                <p>You agree not to:</p>
+                                <ul>
+                                    <li>Use the service for any unlawful purpose</li>
+                                    <li>Attempt to gain unauthorized access to the service</li>
+                                    <li>Submit content that is offensive, defamatory, or infringes intellectual property rights</li>
+                                    <li>Attempt to reverse engineer or copy the service</li>
+                                </ul>
+                                
+                                <h3>6. Intellectual Property</h3>
+                                <p>You retain ownership of your submitted content. BRS Labs retains all rights to the service and evaluation technology.</p>
+                                
+                                <h3>7. Limitation of Liability</h3>
+                                <p>BRS Labs shall not be liable for any indirect, incidental, special, or consequential damages resulting from your use of the service.</p>
+                                
+                                <h3>8. Governing Law</h3>
+                                <p>These terms are governed by the laws of the State of California, United States.</p>
+                                
+                                <h3>9. Contact Information</h3>
+                                <p>BRS Labs, LLC<br>
+                                5627 Kanan Rd., Ste. 280<br>
+                                Agoura Hills, CA 91301<br>
+                                Email: support@bigredstripe.com</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+
+        function showRefundPolicy() {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="refundModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                    <div class="relative top-8 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+                        <div class="mt-3">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-bold text-gray-900">Refund Policy</h2>
+                                <button onclick="closeModal('refundModal')" class="text-gray-400 hover:text-gray-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="prose max-w-none">
+                                <p><strong>Effective Date:</strong> [Date]</p>
+                                <p><strong>Last Updated:</strong> [Date]</p>
+                                
+                                <h3>Refund Eligibility</h3>
+                                <p>We offer refunds based on your usage of the evaluation service:</p>
+                                
+                                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                                    <h4 class="text-green-800 font-semibold">100% Refund</h4>
+                                    <p class="text-green-700 mb-0">Available if no evaluations have been completed</p>
+                                </div>
+                                
+                                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                                    <h4 class="text-yellow-800 font-semibold">50% Refund</h4>
+                                    <p class="text-yellow-700 mb-0">Available if 1-5 evaluations have been completed</p>
+                                </div>
+                                
+                                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                    <h4 class="text-red-800 font-semibold">No Refund</h4>
+                                    <p class="text-red-700 mb-0">If 6 or more evaluations have been completed</p>
+                                </div>
+                                
+                                <h3>Important Conditions</h3>
+                                <ul>
+                                    <li><strong>Time Limit:</strong> Refund requests must be made within 30 days of credit purchase</li>
+                                    <li><strong>Refund Amount:</strong> Based on evaluations used, regardless of remaining credits</li>
+                                    <li><strong>Terms Violations:</strong> No refunds available if Terms of Service are violated</li>
+                                    <li><strong>Request Method:</strong> Written request required from the account email address</li>
+                                </ul>
+                                
+                                <h3>How to Request a Refund</h3>
+                                <p>To request a refund, send an email to <a href="mailto:support@bigredstripe.com">support@bigredstripe.com</a> from your account email address. Include:</p>
+                                <ul>
+                                    <li>Your account email address</li>
+                                    <li>Date of purchase</li>
+                                    <li>Reason for refund request</li>
+                                </ul>
+                                
+                                <p>Refunds are processed within 5-10 business days to your original payment method.</p>
+                                
+                                <h3>Contact Us</h3>
+                                <p>Questions about our refund policy? Contact us at support@bigredstripe.com</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.remove();
+            }
+        }
+        // Auto-show Getting Started for new users
+        function checkAndShowGettingStarted() {
+            if (!currentUser || !currentUserProfile) return;
+            
+            // Check if this is their first time (no submissions yet)
+            window.dbHelpers.getUserSubmissions(currentUser.id).then(result => {
+                if (result.success && result.data.length === 0) {
+                    // New user with no submissions - show Getting Started
+                    setTimeout(() => {
+                        showGettingStarted();
+                    }, 1000); // Small delay so they see the main app first
+                }
+            });
+        }
+   </script>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white mt-auto">
+        <div class="max-w-6xl mx-auto px-6 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Column 1: Help & Support -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Help & Support</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" onclick="showGettingStarted()" class="text-gray-300 hover:text-white transition-colors">Getting Started</a></li>
+                        <li><a href="#" onclick="showFAQ()" class="text-gray-300 hover:text-white transition-colors">FAQs</a></li>
+                        <li><a href="mailto:support@bigredstripe.com" class="text-gray-300 hover:text-white transition-colors">Contact BRS Labs</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Column 2: Resources & Learning -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Resources & Learning</h3>
+                    <ul class="space-y-2">
+                        <li><a href="https://sales.bigredstripe.com/crucible/?video=LoglineEvaluatorLink" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition-colors">The Crucible</a></li>
+                        <li><a href="#" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition-colors">The Complete Guide to Story Structure</a></li>
+                        <li><a href="#" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition-colors">Get Weekly Screenwriting Tips</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Bottom Section -->
+            <div class="border-t border-gray-700 mt-6 pt-6 flex flex-col md:flex-row justify-between items-center">
+                <div class="text-sm text-gray-400 mb-4 md:mb-0">
+                    © 2025 BRS Labs, LLC. All rights reserved.
+                </div>
+                <div class="flex space-x-4 text-sm">
+                    <a href="#" onclick="showPrivacyPolicy()" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a>
+                    <a href="#" onclick="showTermsOfService()" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a>
+                    <a href="#" onclick="showRefundPolicy()" class="text-gray-400 hover:text-white transition-colors">Refund Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>
