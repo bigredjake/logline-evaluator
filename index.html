@@ -2349,6 +2349,10 @@ function clearLoglineForm() {
         localStorage.setItem(`startedFresh_${currentUser.id}`, 'true');
         // CLEAR the saved form data so it starts truly fresh
         localStorage.removeItem(`formData_${currentUser.id}`);
+
+                // DEBUG: Verify it's actually cleared
+        const checkCleared = localStorage.getItem(`formData_${currentUser.id}`);
+        console.log('After removeItem, formData is:', checkCleared);
     }
 }
         function clearLoglineForm() {
