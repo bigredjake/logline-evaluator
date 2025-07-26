@@ -2369,13 +2369,13 @@ async function generateStudentCodes() {
             localStorage.setItem(`formData_${currentUser.id}`, JSON.stringify(formData));
         }
 
-       function loadUserFormData() {
+     function loadUserFormData() {
             if (!currentUser) return;
             
             // Check if user clicked "Start Fresh" - if so, don't load last submission
             const startedFresh = localStorage.getItem(`startedFresh_${currentUser.id}`);
             if (startedFresh) {
-                // Load their in-progress work instead
+                // Only load their in-progress work, never auto-load last submission
                 try {
                     const savedData = localStorage.getItem(`formData_${currentUser.id}`);
                     if (savedData) {
@@ -2388,13 +2388,14 @@ async function generateStudentCodes() {
                         document.getElementById('storyDetails').value = formData.storyDetails || '';
                         document.getElementById('logline').value = formData.logline || '';
                     }
+                    // If no saved data, just leave fields empty - don't load last submission
                 } catch (error) {
                     console.error('Error loading form data:', error);
                 }
-                return;
+                return; // IMPORTANT: Exit here, don't load last submission
             }
             
-            // Otherwise load from last submission
+            // Only load from last submission if they haven't clicked "Start Fresh"
             loadLastSubmissionData();
         }
 
