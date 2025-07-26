@@ -2367,11 +2367,15 @@ function clearLoglineForm() {
         }
 
         function saveCurrentFormData() {
-            if (!currentUser) return;
-            
-            const formData = {
-                genre: document.getElementById('genre').value,
-                tone: document.getElementById('tone').value,
+    if (!currentUser) return;
+    
+    // DEBUG: See what's calling this function
+    console.log('saveCurrentFormData called!', new Error().stack);
+    
+    const formData = {
+        genre: document.getElementById('genre').value,
+        tone: document.getElementById('tone').value,
+        // ... rest of function stays the same
                 mainCharacter: document.getElementById('mainCharacter').value,
                 antagonist: document.getElementById('antagonist').value,
                 incitingIncident: document.getElementById('incitingIncident').value,
