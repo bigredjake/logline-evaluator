@@ -2335,7 +2335,23 @@ async function generateStudentCodes() {
             }
         }
         // Form data persistence functions
-     function clearLoglineForm() {
+function clearLoglineForm() {
+    document.getElementById('genre').value = '';
+    document.getElementById('tone').value = '';
+    document.getElementById('mainCharacter').value = '';
+    document.getElementById('antagonist').value = '';
+    document.getElementById('incitingIncident').value = '';
+    document.getElementById('storyDetails').value = '';
+    document.getElementById('logline').value = '';
+    
+    if (currentUser) {
+        // Set flag to not load last submission
+        localStorage.setItem(`startedFresh_${currentUser.id}`, 'true');
+        // CLEAR the saved form data so it starts truly fresh
+        localStorage.removeItem(`formData_${currentUser.id}`);
+    }
+}
+        function clearLoglineForm() {
             document.getElementById('genre').value = '';
             document.getElementById('tone').value = '';
             document.getElementById('mainCharacter').value = '';
