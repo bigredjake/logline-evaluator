@@ -2371,7 +2371,14 @@ async function generateStudentCodes() {
 
      function loadUserFormData() {
             if (!currentUser) return;
-            
+
+           // DEBUG: Check what's happening
+    const startedFresh = localStorage.getItem(`startedFresh_${currentUser.id}`);
+    const savedData = localStorage.getItem(`formData_${currentUser.id}`);
+    console.log('Debug - startedFresh:', startedFresh, 'savedData exists:', !!savedData);
+    
+    // ... rest of function stays the same
+         
             // Check if user clicked "Start Fresh" - if so, don't load last submission
             const startedFresh = localStorage.getItem(`startedFresh_${currentUser.id}`);
             if (startedFresh) {
