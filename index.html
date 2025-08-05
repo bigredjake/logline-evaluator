@@ -2085,13 +2085,17 @@ async function generateStudentCodes() {
     
     // Student access has expired - convert to credits user with 3 free credits
     try {
-        const updateResult = await window.supabase
-            .from('user_profiles')
-            .update({
-                user_type: 'credits',
-                credits: 3,
-                access_expiry: null
-            })
+      // Preserve existing credits and add 3 bonus credits
+const existingCredits = currentUserProfile.credits || 0;
+const newCredits = existingCredits + 3;
+
+const updateResult = await window.supabase
+    .from('user_profiles')
+    .update({
+        user_type: 'credits',
+        credits: newCredits,
+        access_expiry: null
+    })
             .eq('id', currentUser.id)
             .select()
             .single();
@@ -2105,7 +2109,7 @@ async function generateStudentCodes() {
             
             // Show notification to user
             setTimeout(() => {
-                alert('Your student access has expired. You\'ve been converted to a credits user with 3 free credits to get you started!');
+               alert('Your student access has expired. You\'ve been converted to a credits user with 3 free bonus credits. If you were previously a credits user, your remaining credits have been restored plus the 3 free bonus credits.');
             }, 1000);
         }
     } catch (error) {
