@@ -1077,9 +1077,12 @@ async function updatePasswordFromReset(token) {
                 currentUser = authResult.data.user;
                 currentUserProfile = userProfile;
                 
-                // Step 7: Success!
-                alert('Account created successfully! Welcome to the Logline Evaluator.');
-                showApp();
+                // Step 7: Send welcome email
+await sendWelcomeEmail(userProfile.user_type, userProfile.credits, userProfile.access_expiry);
+
+// Step 8: Success!
+alert('Account created successfully! Welcome to the Logline Evaluator.');
+showApp();
                 
             } catch (error) {
                 console.error('Registration error:', error);
@@ -2145,6 +2148,51 @@ The BRS Labs Team`
 });
     } catch (error) {
         console.error('Failed to send conversion email:', error);
+    }
+}
+
+        async function sendWelcomeEmail(userType, credits = 0, accessExpiry = null) {
+    try {
+        let accessInfo;
+if (userType === 'student') {
+    const expiry = new Date(accessExpiry);
+    accessInfo = `You have unlimited access until ${expiry.toLocaleDateString()}. After that, you'll need to purchase credits to continue using the evaluator.`;
+} else if (credits > 0) {
+    accessInfo = `You have ${credits} credits ready to use. Each evaluation uses 1 credit.`;
+} else {
+    accessInfo = `To get started, you'll need to purchase credits. Each evaluation uses 1 credit, and you can purchase credits anytime from within the app.`;
+}
+
+        const templateParams = {
+            to_email: currentUser.email,
+            user_name: currentUser.email.split('@')[0],
+            subject: 'Welcome to the BRS Labs Logline Evaluator!',
+            message: `Hi ${currentUser.email.split('@')[0]},
+
+Welcome to the BRS Labs Logline Evaluator! We're excited to help you craft compelling loglines that grab Hollywood's attention.
+
+🔖 IMPORTANT: Bookmark this link to easily access the evaluator:
+${window.location.origin}
+
+${accessInfo}
+
+Ready to get started? Here are your next steps:
+1. Click the link above to access the evaluator
+2. Add credits if you haven't or a code if you have one
+3. Fill out the logline form with your story details  
+4. Get instant professional feedback on your logline
+5. Use our suggestions to refine and improve your logline
+
+Need help? Check out our Getting Started guide or the FAQs at the bottom of the app... or contact us at support@bigredstripe.com
+
+Happy writing!
+The BRS Labs Team`,
+            timestamp: Date.now()
+        };
+        
+        await emailjs.send('service_z3nppt7', 'template_8xpn9tn', templateParams);
+    } catch (error) {
+        console.error('Failed to send welcome email:', error);
     }
 }
         
