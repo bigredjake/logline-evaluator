@@ -235,6 +235,23 @@ window.dbHelpers = {
             console.error('Error updating user status:', error);
             return { success: false, error: error.message };
         }
+    },
+
+    async deleteSubmission(submissionId) {
+        try {
+            const { data, error } = await supabase
+                .from('submissions')
+                .delete()
+                .eq('id', submissionId)
+                .select()
+                .single();
+                
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error deleting submission:', error);
+            return { success: false, error: error.message };
+        }
     }
 };
 
