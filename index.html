@@ -1020,7 +1020,15 @@ async function updatePasswordFromReset(token) {
 
     async function register(email, password, studentCode) {
             setLoading(true);
-            
+
+ // Check registration limits first
+    const limitCheck = await checkRegistrationLimit();
+    if (!limitCheck.allowed) {
+        alert(`Registration is currently full for Phase ${limitCheck.phase}. We have ${limitCheck.currentCount} users (limit: ${limitCheck.limit}). Please join our waitlist!`);
+        setLoading(false);
+        return;
+    }
+        
             try {
                 // Step 1: Validate student code first (if provided)
                 let validatedCode = null;
