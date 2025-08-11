@@ -960,16 +960,6 @@ async function updatePasswordFromReset(token) {
             }
 
            if (currentView === 'register') {
-    // Check registration limits first
-    const limitCheck = await checkRegistrationLimit();
-    if (!limitCheck.allowed) {
-        alert(`Registration is currently full for Phase ${limitCheck.phase}. We have ${limitCheck.currentCount} users (limit: ${limitCheck.limit}). Please join our waitlist!`);
-        // TODO: Show waitlist form here when Kit is working
-        return;
-    }
-    
-    const confirmPassword = document.getElementById('confirmPassword').value;
-    // ... rest of registration code
                 const confirmPassword = document.getElementById('confirmPassword').value;
                 const studentCode = document.getElementById('studentCode').value;
 
