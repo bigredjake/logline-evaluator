@@ -593,7 +593,7 @@
 const PHASE_CONFIG = {
     currentPhase: 1,
     limits: {
-        phase1: 1,
+        phase1: 25,
         phase2: 20,  // Additional users (45 total)
         phase3: 100, // Additional users (145 total)
         phase4: -1   // Unlimited (-1 means no limit)
@@ -1022,12 +1022,14 @@ async function updatePasswordFromReset(token) {
             setLoading(true);
 
  // Check registration limits first
-    const limitCheck = await checkRegistrationLimit();
-    if (!limitCheck.allowed) {
-        alert(`Registration is currently full for Phase ${limitCheck.phase}. We have ${limitCheck.currentCount} users (limit: ${limitCheck.limit}). Please join our waitlist!`);
-        setLoading(false);
-        return;
-    }
+const limitCheck = await checkRegistrationLimit();
+if (!limitCheck.allowed) {
+    alert(`Registration is currently full. Please join our waitlist!`);
+    // Redirect to Kit waitlist form after they click OK
+    window.open('https://successful-innovator-3133.kit.com/7b7bff4c4d', '_blank');
+    setLoading(false);
+    return;
+}
         
             try {
                 // Step 1: Validate student code first (if provided)
