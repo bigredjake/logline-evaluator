@@ -589,6 +589,57 @@
         let showAllHistory = false;
         let currentEvaluation = null;
 
+// Phase management configuration
+const PHASE_CONFIG = {
+    currentPhase: 1,
+    limits: {
+        phase1: 25,
+        phase2: 20,  // Additional users (45 total)
+        phase3: 100, // Additional users (145 total)
+        phase4: -1   // Unlimited (-1 means no limit)
+    }
+};
+
+// Calculate total allowed users for current phase
+function getTotalUserLimit() {
+    switch(PHASE_CONFIG.currentPhase) {
+        case 1: return PHASE_CONFIG.limits.phase1;
+        case 2: return PHASE_CONFIG.limits.phase1 + PHASE_CONFIG.limits.phase2;
+        case 3: return PHASE_CONFIG.limits.phase1 + PHASE_CONFIG.limits.phase2 + PHASE_CONFIG.limits.phase3;
+        case 4: return -1; // Unlimited
+        default: return PHASE_CONFIG.limits.phase1;
+    }
+}
+
+// Check if registration should be blocked
+async function checkRegistrationLimit() {
+    const totalLimit = getTotalUserLimit();
+    
+    if (totalLimit === -1) {
+        return { allowed: true }; // Phase 4 = unlimited
+    }
+    
+    // Count current non-admin users
+    const usersResult = await window.dbHelpers.getAllUsers();
+    if (!usersResult.success) {
+        return { allowed: true, error: 'Could not verify user count' };
+    }
+    
+    const nonAdminUsers = usersResult.data.filter(user => !user.is_admin);
+    const currentCount = nonAdminUsers.length;
+    
+    if (currentCount >= totalLimit) {
+        return { 
+            allowed: false, 
+            currentCount: currentCount, 
+            limit: totalLimit,
+            phase: PHASE_CONFIG.currentPhase
+        };
+    }
+    
+    return { allowed: true, currentCount: currentCount, limit: totalLimit };
+}
+        
         // Utility Functions
         function checkPasswordStrength(password) {
             let strength = 0;
@@ -908,7 +959,17 @@ async function updatePasswordFromReset(token) {
                 return;
             }
 
-            if (currentView === 'register') {
+           if (currentView === 'register') {
+    // Check registration limits first
+    const limitCheck = await checkRegistrationLimit();
+    if (!limitCheck.allowed) {
+        alert(`Registration is currently full for Phase ${limitCheck.phase}. We have ${limitCheck.currentCount} users (limit: ${limitCheck.limit}). Please join our waitlist!`);
+        // TODO: Show waitlist form here when Kit is working
+        return;
+    }
+    
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    // ... rest of registration code
                 const confirmPassword = document.getElementById('confirmPassword').value;
                 const studentCode = document.getElementById('studentCode').value;
 
