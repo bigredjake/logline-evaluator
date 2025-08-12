@@ -578,7 +578,6 @@
     <script>
         // Initialize Stripe (this is live key)
        const stripe = Stripe('pk_live_51IAqQXGeynMWYbxDe4FmJ16ecGh6rp2WkZKIXjSVzVPeb8eFxku6AaNlxnY4aKmvTaImVI8AL0jEUujdxAuY0Rwc00WRjZpjYg');
-        console.log('Stripe initialized with key:', 'pk_live_51IAqQXGeynMWYbxDe4FmJ16ecGh6rp2WkZKIXjSVzVPeb8eFxku6AaNlxnY4aKmvTaImVI8AL0jEUujdxAuY0Rwc00WRjZpjYg');
         
         // Global state
         let currentUser = null;
@@ -1531,8 +1530,7 @@ async function checkBetaEligibility() {
                     throw new Error(session.error || 'Failed to create payment session');
                 }
 
-                // Redirect to Stripe Checkout
-                const stripe = Stripe('pk_test_51IAqQXGeynMWYbxDVS6wPalfpyuFfRknJN1xnYqmXGFT2B37foYZHdKYkMKohUZAgOOHflOGLYgiKev537GuOZKi00XO4MKDk9');
+               // Redirect to Stripe Checkout
                 const { error } = await stripe.redirectToCheckout({
                     sessionId: session.id
                 });
