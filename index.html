@@ -591,9 +591,9 @@
 
 // Phase management configuration
 const PHASE_CONFIG = {
-    currentPhase: 2,
+    currentPhase: 1,
     limits: {
-        phase1: 1,
+        phase1: 25,
         phase2: 20,  // Additional users (45 total)
         phase3: 100, // Additional users (145 total)
         phase4: -1   // Unlimited (-1 means no limit)
@@ -1280,8 +1280,16 @@ showApp();
             const codesResult = await window.dbHelpers.getAllStudentCodes();
             const totalCodes = codesResult.success ? codesResult.data.length : 0;
             
-            document.getElementById('totalUsers').textContent = totalUsers;
+           // Calculate users by phase (simplified - just show current totals)
+            const currentPhase = PHASE_CONFIG.currentPhase;
+            const currentLimit = getTotalUserLimit();
+            const limitText = currentLimit === -1 ? 'Unlimited' : currentLimit;
+
+            document.getElementById('totalUsers').textContent = `${totalUsers} / ${limitText}`;
             document.getElementById('totalEvaluations').textContent = totalEvaluations;
+
+            // Add phase info
+            document.getElementById('totalUsers').parentElement.querySelector('.text-sm').textContent = `Phase ${currentPhase} Users`;
             document.getElementById('codesCount').textContent = totalCodes;
             document.getElementById('submissionsCount').textContent = totalEvaluations;
             document.getElementById('userCount').textContent = totalUsers;
@@ -1456,6 +1464,20 @@ const submissionResult = await window.dbHelpers.createSubmission(
             showSection('logline');
         }
 
+async function checkBetaEligibility() {
+    // Only Phase 1 & 2 get beta pricing
+    if (PHASE_CONFIG.currentPhase > 2) {
+        return false;
+    }
+    
+    // Check if user has ever made a purchase
+    // We'll check if they have any payment history by looking at their credit history
+    // For now, we'll assume if they have more than 3 credits (the free conversion credits), they've purchased
+    // This is a simple check - you could make it more sophisticated later
+    
+    return currentUserProfile.credits <= 3;
+}
+        
         // Purchase Functions
         function updatePurchaseSection() {
             // Clear any previous code redemption results
@@ -1465,8 +1487,8 @@ const submissionResult = await window.dbHelpers.createSubmission(
             resultDiv.textContent = '';
         }
             
-            // For now, everyone gets beta pricing during the beta period
-            const isBeta = true; // Change this to false when beta period ends
+           // Beta pricing for Phase 1 & 2 users only, and only on first purchase
+            const isBeta = await checkBetaEligibility();
             
             if (isBeta) {
                 document.getElementById('betaDiscount').classList.remove('hidden');
