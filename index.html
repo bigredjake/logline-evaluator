@@ -1195,7 +1195,7 @@ showApp();
     loadLastSubmissionData();
 }
 
-        function showSection(section) {
+        async function showSection(section) {
             document.getElementById('loglineSection').classList.add('hidden');
             document.getElementById('resultsSection').classList.add('hidden');
             document.getElementById('historySection').classList.add('hidden');
@@ -1214,7 +1214,7 @@ showApp();
                 loadSettings();
             } else if (section === 'purchase') {
                 document.getElementById('purchaseSection').classList.remove('hidden');
-                updatePurchaseSection();
+                await updatePurchaseSection();
             } else if (section === 'results') {
                 document.getElementById('resultsSection').classList.remove('hidden');
             }
@@ -1479,7 +1479,7 @@ async function checkBetaEligibility() {
 }
         
         // Purchase Functions
-        function updatePurchaseSection() {
+        async function updatePurchaseSection() {
             // Clear any previous code redemption results
             const resultDiv = document.getElementById('codeRedemptionResult');
              if (resultDiv) {
