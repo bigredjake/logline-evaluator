@@ -225,8 +225,11 @@ Please format your response with clear sections for the evaluation, the five alt
       };
     }
 
+    // Clean up markdown asterisks (OpenAI leaves them, Claude removes them)
+    const cleanContent = result.content.replace(/\*\*(.*?)\*\*/g, '$1');
+    
     // Success - return the evaluation
-    console.log(`Success with ${result.provider}, content length: ${result.content.length}`);
+    console.log(`Success with ${result.provider}, content length: ${cleanContent.length}`);
     
     return {
       statusCode: 200,
@@ -236,7 +239,7 @@ Please format your response with clear sections for the evaluation, the five alt
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
       },
       body: JSON.stringify({ 
-        evaluation: result.content,
+        evaluation: cleanContent,
         provider: result.provider,
         timestamp: new Date().toISOString()
       }),
