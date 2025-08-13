@@ -19,8 +19,8 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Build the prompt (your updated prompt)
-    const prompt = `I'm a screenwriter wanting to get the attention of Hollywood decision makers. Evaluate the following logline as a marketing tool that will be included in a query email, and it needs to hook an industry reader so they would be interested enough to request the screenplay so they can read it.
+    // Build the shared prompt content
+    const promptContent = `I'm a screenwriter wanting to get the attention of Hollywood decision makers. Evaluate the following logline as a marketing tool that will be included in a query email, and it needs to hook an industry reader so they would be interested enough to request the screenplay so they can read it.
 
 The logline should:
 • be short (able to be read in 10-15 seconds or less)
@@ -63,51 +63,130 @@ Please do the following:
 
 Please format your response with clear sections for the evaluation, the five alternatives, and the five possible titles.`;
 
-   // Call Claude API with retry logic for overloaded servers
-let response;
-for (let attempt = 1; attempt <= 3; attempt++) {
-    response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
+    // Function to call Claude API
+    async function callClaude() {
+      console.log('Attempting Claude API call...');
+      
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
             'Content-Type': 'application/json',
             'x-api-key': process.env.CLAUDE_API_KEY,
             'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
+          },
+          body: JSON.stringify({
             model: 'claude-3-5-sonnet-20241022',
             max_tokens: 2000,
             messages: [{
-                role: 'user',
-                content: prompt
+              role: 'user',
+              content: promptContent
             }]
-        })
-    });
+          })
+        });
 
-    if (response.ok) {
-        break; // Success, exit retry loop
-    }
-    
-    if (attempt < 3 && response.status === 529) {
-        // Wait 2-5 seconds before retry for overloaded server
-        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
-        continue;
-    }
-    
-    // If not 529 or final attempt, handle as error
-    if (!response.ok) {
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Claude API success on attempt', attempt);
+          return {
+            success: true,
+            content: data.content[0].text,
+            provider: 'Claude'
+          };
+        }
+        
+        // If 529 (overloaded) and not final attempt, wait and retry
+        if (attempt < 3 && response.status === 529) {
+          console.log(`Claude API overloaded (529), retrying attempt ${attempt + 1}/3...`);
+          await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
+          continue;
+        }
+        
+        // For other errors or final attempt, return failure
         const errorData = await response.text();
-        console.error('Claude API Error:', errorData);
-        return {
-            statusCode: response.status,
-            body: JSON.stringify({ error: 'Claude API error', details: errorData }),
-        };
+        console.error(`Claude API failed on attempt ${attempt}:`, response.status, errorData);
+        
+        if (attempt === 3) {
+          return {
+            success: false,
+            error: `Claude API failed after 3 attempts. Status: ${response.status}`,
+            lastError: errorData
+          };
+        }
+      }
     }
-}
-    
-    const data = await response.json();
-    const claudeResponse = data.content[0].text;
 
-    // Return successful response
+    // Function to call OpenAI API
+    async function callOpenAI() {
+      console.log('Attempting OpenAI API call...');
+      
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [{
+              role: 'user',
+              content: promptContent
+            }],
+            max_tokens: 2000,
+            temperature: 0.7
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('OpenAI API success');
+          return {
+            success: true,
+            content: data.choices[0].message.content,
+            provider: 'OpenAI'
+          };
+        } else {
+          const errorData = await response.text();
+          console.error('OpenAI API error:', response.status, errorData);
+          return {
+            success: false,
+            error: `OpenAI API failed. Status: ${response.status}`,
+            lastError: errorData
+          };
+        }
+      } catch (error) {
+        console.error('OpenAI API exception:', error);
+        return {
+          success: false,
+          error: 'OpenAI API exception',
+          lastError: error.message
+        };
+      }
+    }
+
+    // Primary attempt: Claude
+    let result = await callClaude();
+    
+    // Fallback: OpenAI if Claude fails
+    if (!result.success) {
+      console.log('Claude failed, falling back to OpenAI...');
+      result = await callOpenAI();
+    }
+
+    // If both APIs fail, return error
+    if (!result.success) {
+      console.error('Both Claude and OpenAI APIs failed');
+      return {
+        statusCode: 503,
+        body: JSON.stringify({ 
+          error: 'Both AI services are currently unavailable. Please try again in a few minutes.',
+          details: 'Claude and OpenAI APIs both failed'
+        }),
+      };
+    }
+
+    // Return successful response with provider info
     return {
       statusCode: 200,
       headers: {
@@ -116,7 +195,8 @@ for (let attempt = 1; attempt <= 3; attempt++) {
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
       },
       body: JSON.stringify({ 
-        evaluation: claudeResponse,
+        evaluation: result.content,
+        provider: result.provider,
         timestamp: new Date().toISOString()
       }),
     };
