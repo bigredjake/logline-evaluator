@@ -65,60 +65,66 @@ Please format your response with clear sections for the evaluation, the five alt
 
     // Function to call Claude API
     async function callClaude() {
-      console.log('Attempting Claude API call...');
+      console.log('Starting Claude API attempt...');
       
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': process.env.CLAUDE_API_KEY,
-            'anthropic-version': '2023-06-01'
-          },
-          body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 2000,
-            messages: [{
-              role: 'user',
-              content: promptContent
-            }]
-          })
-        });
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          console.log(`Claude attempt ${attempt}/2`);
+          
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': process.env.CLAUDE_API_KEY,
+              'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+              model: 'claude-3-5-sonnet-20241022',
+              max_tokens: 2000,
+              messages: [{
+                role: 'user',
+                content: promptContent
+              }]
+            })
+          });
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Claude API success on attempt', attempt);
-          return {
-            success: true,
-            content: data.content[0].text,
-            provider: 'Claude'
-          };
-        }
-        
-        // If 529 (overloaded) and not final attempt, wait and retry
-        if (attempt < 3 && response.status === 529) {
-          console.log(`Claude API overloaded (529), retrying attempt ${attempt + 1}/3...`);
-          await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
-          continue;
-        }
-        
-        // For other errors or final attempt, return failure
-        const errorData = await response.text();
-        console.error(`Claude API failed on attempt ${attempt}:`, response.status, errorData);
-        
-        if (attempt === 3) {
-          return {
-            success: false,
-            error: `Claude API failed after 3 attempts. Status: ${response.status}`,
-            lastError: errorData
-          };
+          console.log(`Claude response status: ${response.status}`);
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Claude API success');
+            return {
+              success: true,
+              content: data.content[0].text,
+              provider: 'Claude'
+            };
+          }
+          
+          // If 529 (overloaded) and not final attempt, wait and retry
+          if (attempt < 2 && response.status === 529) {
+            console.log('Claude overloaded (529), retrying...');
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            continue;
+          }
+          
+          // For other errors or final attempt, log and break
+          const errorText = await response.text();
+          console.error(`Claude failed: ${response.status} - ${errorText}`);
+          break;
+          
+        } catch (error) {
+          console.error(`Claude attempt ${attempt} exception:`, error.message);
+          if (attempt === 2) break;
         }
       }
+      
+      console.log('Claude completely failed, will try OpenAI');
+      return { success: false };
     }
 
     // Function to call OpenAI API
     async function callOpenAI() {
-      console.log('Attempting OpenAI API call...');
+      console.log('Starting OpenAI API attempt...');
       
       try {
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -138,55 +144,90 @@ Please format your response with clear sections for the evaluation, the five alt
           })
         });
 
+        console.log(`OpenAI response status: ${response.status}`);
+
         if (response.ok) {
           const data = await response.json();
           console.log('OpenAI API success');
-          return {
-            success: true,
-            content: data.choices[0].message.content,
-            provider: 'OpenAI'
-          };
+          
+          // Verify we got content back
+          if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+            return {
+              success: true,
+              content: data.choices[0].message.content,
+              provider: 'OpenAI'
+            };
+          } else {
+            console.error('OpenAI returned empty content:', JSON.stringify(data, null, 2));
+            return {
+              success: false,
+              error: 'OpenAI returned empty content'
+            };
+          }
         } else {
-          const errorData = await response.text();
-          console.error('OpenAI API error:', response.status, errorData);
+          const errorText = await response.text();
+          console.error(`OpenAI failed: ${response.status} - ${errorText}`);
           return {
             success: false,
-            error: `OpenAI API failed. Status: ${response.status}`,
-            lastError: errorData
+            error: `OpenAI API error: ${response.status}`
           };
         }
       } catch (error) {
-        console.error('OpenAI API exception:', error);
+        console.error('OpenAI exception:', error.message);
         return {
           success: false,
-          error: 'OpenAI API exception',
-          lastError: error.message
+          error: `OpenAI exception: ${error.message}`
         };
       }
     }
 
-    // Primary attempt: Claude
+    // Try Claude first
+    console.log('Starting evaluation process...');
     let result = await callClaude();
     
-    // Fallback: OpenAI if Claude fails
+    // If Claude fails, try OpenAI
     if (!result.success) {
-      console.log('Claude failed, falling back to OpenAI...');
+      console.log('Claude failed, attempting OpenAI fallback...');
       result = await callOpenAI();
     }
 
-    // If both APIs fail, return error
+    // If both fail, return error
     if (!result.success) {
-      console.error('Both Claude and OpenAI APIs failed');
+      console.error('Both APIs failed completely');
       return {
         statusCode: 503,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        },
         body: JSON.stringify({ 
           error: 'Both AI services are currently unavailable. Please try again in a few minutes.',
-          details: 'Claude and OpenAI APIs both failed'
+          details: result.error || 'Unknown error'
         }),
       };
     }
 
-    // Return successful response with provider info
+    // Verify we have content
+    if (!result.content || result.content.trim().length === 0) {
+      console.error('No content in successful result');
+      return {
+        statusCode: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        },
+        body: JSON.stringify({ 
+          error: 'AI service returned empty response',
+          provider: result.provider
+        }),
+      };
+    }
+
+    // Success - return the evaluation
+    console.log(`Success with ${result.provider}, content length: ${result.content.length}`);
+    
     return {
       statusCode: 200,
       headers: {
@@ -202,10 +243,18 @@ Please format your response with clear sections for the evaluation, the five alt
     };
 
   } catch (error) {
-    console.error('Function error:', error);
+    console.error('Function top-level error:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error', details: error.message }),
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      },
+      body: JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error.message 
+      }),
     };
   }
 };
