@@ -63,33 +63,47 @@ Please do the following:
 
 Please format your response with clear sections for the evaluation, the five alternatives, and the five possible titles.`;
 
-    // Call Claude API from server (no CORS issues here)
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 2000,
-        messages: [{
-          role: 'user',
-          content: prompt
-        }]
-      })
+   // Call Claude API with retry logic for overloaded servers
+let response;
+for (let attempt = 1; attempt <= 3; attempt++) {
+    response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.CLAUDE_API_KEY,
+            'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 2000,
+            messages: [{
+                role: 'user',
+                content: prompt
+            }]
+        })
     });
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Claude API Error:', errorData);
-      return {
-        statusCode: response.status,
-        body: JSON.stringify({ error: 'Claude API error', details: errorData }),
-      };
+    if (response.ok) {
+        break; // Success, exit retry loop
     }
-
+    
+    if (attempt < 3 && response.status === 529) {
+        // Wait 2-5 seconds before retry for overloaded server
+        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
+        continue;
+    }
+    
+    // If not 529 or final attempt, handle as error
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Claude API Error:', errorData);
+        return {
+            statusCode: response.status,
+            body: JSON.stringify({ error: 'Claude API error', details: errorData }),
+        };
+    }
+}
+    
     const data = await response.json();
     const claudeResponse = data.content[0].text;
 
