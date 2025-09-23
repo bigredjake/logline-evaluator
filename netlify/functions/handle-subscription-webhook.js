@@ -41,7 +41,7 @@ exports.handler = async (event, context) => {
         const expiryDate = new Date(subscription.current_period_end * 1000);
         console.log('Expiry date calculated:', expiryDate.toISOString());
         
-        const updateResult = await supabase
+        const { data, error } = await supabase
           .from('user_profiles')
           .update({
             user_type: 'subscriber',
@@ -50,12 +50,14 @@ exports.handler = async (event, context) => {
             access_expiry: expiryDate.toISOString(),
             last_payment_date: new Date().toISOString()
           })
-          .eq('id', session.metadata.userId);
+          .eq('id', session.metadata.userId)
+          .select();
         
-        console.log('Supabase update result:', JSON.stringify(updateResult));
+        console.log('Update data:', data);
+        console.log('Update error:', error);
         
-        if (updateResult.error) {
-          console.error('Supabase update error:', updateResult.error);
+        if (error) {
+          throw new Error('Supabase update failed: ' + JSON.stringify(error));
         }
         
         break;
