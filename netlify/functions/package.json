@@ -1,9 +1,0 @@
-{
-  "name": "logline-evaluator",
-  "version": "1.0.0",
-  "description": "BRS Labs Logline Evaluator",
-  "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
-    "stripe": "^14.0.0"
-  }
-}
