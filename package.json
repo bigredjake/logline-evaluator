@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "BRS Labs Logline Evaluator",
   "dependencies": {
-    "stripe": "^10.0.0"
+    "@supabase/supabase-js": "^2.39.0",
+    "stripe": "^14.0.0"
   }
 }
