@@ -1350,27 +1350,33 @@ showApp();
             }
         }
 
-       function updateUI() {
-            if (!currentUserProfile) return;
+        function updateUI() {
+    if (!currentUserProfile) return;
 
-            const userStatus = document.getElementById('userStatus');
-            if (currentUserProfile.user_type === 'credits') {
-                userStatus.textContent = currentUserProfile.credits + ' credits remaining';
-                userStatus.className = 'text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline';
-                userStatus.onclick = function() {
-                    showSection('purchase');
-                };
-            } else if (currentUserProfile.user_type === 'student') {
-                const daysLeft = calculateDaysRemaining(currentUserProfile.access_expiry);
-                userStatus.textContent = daysLeft + ' days remaining';
-                userStatus.className = 'text-sm font-medium text-green-600';
-                userStatus.onclick = null;
-            } else if (currentUserProfile.user_type === 'admin') {
-                userStatus.textContent = 'Unlimited access';
-                userStatus.className = 'text-sm font-medium text-purple-600';
-                userStatus.onclick = null;
-            }
+    const userStatus = document.getElementById('userStatus');
+    
+    if (currentUserProfile.user_type === 'subscriber' || currentUserProfile.user_type === 'student') {
+        if (currentUserProfile.access_expiry) {
+            const daysLeft = calculateDaysRemaining(currentUserProfile.access_expiry);
+            userStatus.textContent = daysLeft + ' days remaining';
+            userStatus.className = 'text-sm font-medium text-green-600';
+            userStatus.onclick = null;
+        } else {
+            userStatus.textContent = 'No active subscription';
+            userStatus.className = 'text-sm font-medium text-red-600 hover:text-red-800 cursor-pointer underline';
+            userStatus.onclick = function() { showSection('purchase'); };
         }
+    } else if (currentUserProfile.user_type === 'credits') {
+        userStatus.textContent = currentUserProfile.credits + ' credits remaining';
+        userStatus.className = 'text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline';
+        userStatus.onclick = function() { showSection('purchase'); };
+    } else if (currentUserProfile.user_type === 'admin') {
+        userStatus.textContent = 'Unlimited access';
+        userStatus.className = 'text-sm font-medium text-purple-600';
+        userStatus.onclick = null;
+    }
+}
+        
         async function loadSettings() {
             document.getElementById('newEmail').value = currentUser.email;
             
@@ -2397,13 +2403,24 @@ The BRS Labs Team`,
     }
 }
         
-        function shouldRedirectToPurchase() {
-            // Only redirect credits users with 0 credits
-            if (currentUserProfile && currentUserProfile.user_type === 'credits' && currentUserProfile.credits <= 0) {
-                return true;
-            }
-            return false;
-        }
+       function shouldRedirectToPurchase() {
+    if (!currentUserProfile) return false;
+    
+    // Check subscribers and students for expired access
+    if (currentUserProfile.user_type === 'subscriber' || currentUserProfile.user_type === 'student') {
+        if (!currentUserProfile.access_expiry) return true;
+        const now = new Date();
+        const expiry = new Date(currentUserProfile.access_expiry);
+        return expiry <= now;
+    }
+    
+    // Check credits users
+    if (currentUserProfile.user_type === 'credits' && currentUserProfile.credits <= 0) {
+        return true;
+    }
+    
+    return false;
+}
 
         function isNewUser() {
             // This would need to be determined by checking submissions, but for now return false
