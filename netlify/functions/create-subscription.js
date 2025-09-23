@@ -36,8 +36,8 @@ exports.handler = async (event, context) => {
         quantity: 1,
       }],
       mode: 'subscription',
-      success_url: `${process.env.URL}/?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.URL}/?subscription=cancelled`,
+     success_url: `https://subscription-system--logline-evaluator.netlify.app/?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
+cancel_url: `https://subscription-system--logline-evaluator.netlify.app/?subscription=cancelled`,
       metadata: {
         userId: userId,
       }
