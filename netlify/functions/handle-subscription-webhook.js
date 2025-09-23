@@ -41,24 +41,41 @@ exports.handler = async (event, context) => {
         const expiryDate = new Date(subscription.current_period_end * 1000);
         console.log('Expiry date calculated:', expiryDate.toISOString());
         
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .update({
-            user_type: 'subscriber',
-            subscription_id: subscription.id,
-            subscription_status: 'active',
-            access_expiry: expiryDate.toISOString(),
-            last_payment_date: new Date().toISOString()
-          })
-          .eq('id', session.metadata.userId)
-          .select();
-        
-        console.log('Update data:', data);
-        console.log('Update error:', error);
-        
-        if (error) {
-          throw new Error('Supabase update failed: ' + JSON.stringify(error));
-        }
+        // Verify user exists first
+const { data: existingUser, error: fetchError } = await supabase
+  .from('user_profiles')
+  .select('id, email')
+  .eq('id', session.metadata.userId)
+  .single();
+
+console.log('User lookup result:', existingUser, fetchError);
+
+if (fetchError || !existingUser) {
+  throw new Error(`User not found: ${session.metadata.userId}, Error: ${JSON.stringify(fetchError)}`);
+}
+
+const { data, error } = await supabase
+  .from('user_profiles')
+  .update({
+    user_type: 'subscriber',
+    subscription_id: subscription.id,
+    subscription_status: 'active',
+    access_expiry: expiryDate.toISOString(),
+    last_payment_date: new Date().toISOString()
+  })
+  .eq('id', session.metadata.userId)
+  .select();
+
+console.log('Update result - Data:', data);
+console.log('Update result - Error:', error);
+
+if (error) {
+  throw new Error(`Supabase update failed: ${JSON.stringify(error)}`);
+}
+
+if (!data || data.length === 0) {
+  throw new Error('No rows were updated - user ID may not exist');
+}
         
         break;
 
