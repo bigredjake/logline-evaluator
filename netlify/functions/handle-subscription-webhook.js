@@ -21,15 +21,21 @@ exports.handler = async (event, context) => {
     };
   }
 
-  try {
+ try {
+    console.log('Webhook event received:', stripeEvent.type);
+    
     switch (stripeEvent.type) {
       case 'checkout.session.completed':
         const session = stripeEvent.data.object;
+        console.log('Session metadata userId:', session.metadata?.userId);
+        
         const subscription = await stripe.subscriptions.retrieve(session.subscription);
+        console.log('Subscription retrieved:', subscription.id);
         
         const expiryDate = new Date(subscription.current_period_end * 1000);
+        console.log('Expiry date calculated:', expiryDate.toISOString());
         
-        await supabase
+        const updateResult = await supabase
           .from('user_profiles')
           .update({
             user_type: 'subscriber',
@@ -39,6 +45,12 @@ exports.handler = async (event, context) => {
             last_payment_date: new Date().toISOString()
           })
           .eq('id', session.metadata.userId);
+        
+        console.log('Supabase update result:', JSON.stringify(updateResult));
+        
+        if (updateResult.error) {
+          console.error('Supabase update error:', updateResult.error);
+        }
         
         break;
 
