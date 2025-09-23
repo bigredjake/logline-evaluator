@@ -628,6 +628,108 @@ const PHASE_CONFIG = {
     }
 };
 
+// Determine discount based on current phase
+async function getDiscountPercentage() {
+    const currentPhase = PHASE_CONFIG.currentPhase;
+    
+    // Check if user has already used discount
+    if (currentUserProfile.subscription_id || currentUserProfile.last_payment_date) {
+        return 0;
+    }
+    
+    if (currentPhase <= 2) {
+        return 50; // Beta discount for Phase 1-2
+    } else if (currentPhase === 3) {
+        return 25; // Early adopter discount for Phase 3
+    }
+    return 0; // No discount for Phase 4+
+}
+
+// Update pricing display based on discount
+async function updatePricingDisplay() {
+    const discount = await getDiscountPercentage();
+    
+    // Show appropriate discount banner
+    if (discount === 50) {
+        document.getElementById('betaDiscount').classList.remove('hidden');
+        document.getElementById('earlyAdopterDiscount').classList.add('hidden');
+    } else if (discount === 25) {
+        document.getElementById('betaDiscount').classList.add('hidden');
+        document.getElementById('earlyAdopterDiscount').classList.remove('hidden');
+    } else {
+        document.getElementById('betaDiscount').classList.add('hidden');
+        document.getElementById('earlyAdopterDiscount').classList.add('hidden');
+    }
+    
+    // Update displayed prices
+    const prices = {
+        monthly: 36,
+        quarterly: 99,
+        annual: 324
+    };
+    
+    if (discount > 0) {
+        const monthlyDiscounted = prices.monthly * (1 - discount/100);
+        const quarterlyDiscounted = prices.quarterly * (1 - discount/100);
+        const annualDiscounted = prices.annual * (1 - discount/100);
+        
+        document.getElementById('priceMonthly').innerHTML = 
+            `<span class="line-through text-gray-400">$${prices.monthly}</span> $${monthlyDiscounted.toFixed(0)}`;
+        document.getElementById('priceQuarterly').innerHTML = 
+            `<span class="line-through text-gray-400">$${Math.round(prices.quarterly/3)}</span> $${Math.round(quarterlyDiscounted/3)}`;
+        document.getElementById('priceAnnual').innerHTML = 
+            `<span class="line-through text-gray-400">$${Math.round(prices.annual/12)}</span> $${Math.round(annualDiscounted/12)}`;
+    } else {
+        document.getElementById('priceMonthly').textContent = `$${prices.monthly}`;
+        document.getElementById('priceQuarterly').textContent = `$${Math.round(prices.quarterly/3)}`;
+        document.getElementById('priceAnnual').textContent = `$${Math.round(prices.annual/12)}`;
+    }
+}
+
+// Subscribe function
+async function subscribe(plan) {
+    const priceIds = {
+        monthly: 'price_1SAJauGeynMWYbxDxk5dJdUt',
+        quarterly: 'price_1SAJduGeynMWYbxDV165lpnX',
+        annual: 'price_1SAJfIGeynMWYbxDn9hm2WZN'
+    };
+    
+    const discount = await getDiscountPercentage();
+    
+    try {
+        const response = await fetch('/.netlify/functions/create-subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                priceId: priceIds[plan],
+                userEmail: currentUser.email,
+                userId: currentUser.id,
+                discount: discount
+            })
+        });
+        
+        const session = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(session.error || 'Failed to create subscription');
+        }
+        
+        // Redirect to Stripe Checkout
+        const stripe = Stripe('pk_test_51IAqQXGeynMWYbxDVS6wPalfpyuFfRknJN1xnYqmXGFT2B37foYZHdKYkMKohUZAgOOHflOGLYgiKev537GuOZKi00XO4MKDk9');
+        const { error } = await stripe.redirectToCheckout({
+            sessionId: session.sessionId
+        });
+        
+        if (error) {
+            console.error('Stripe redirect error:', error);
+            alert('Error redirecting to payment: ' + error.message);
+        }
+    } catch (error) {
+        console.error('Subscription error:', error);
+        alert('Error starting subscription: ' + error.message);
+    }
+}
+        
 // Calculate total allowed users for current phase
 function getTotalUserLimit() {
     switch(PHASE_CONFIG.currentPhase) {
@@ -1506,30 +1608,18 @@ async function checkBetaEligibility() {
     return currentUserProfile.credits <= 3;
 }
         
-        // Purchase Functions
-        async function updatePurchaseSection() {
-            // Clear any previous code redemption results
-            const resultDiv = document.getElementById('codeRedemptionResult');
-             if (resultDiv) {
-            resultDiv.classList.add('hidden');
-            resultDiv.textContent = '';
-        }
-            
-           // Beta pricing for Phase 1 & 2 users only, and only on first purchase
-            const isBeta = await checkBetaEligibility();
-            
-            if (isBeta) {
-                document.getElementById('betaDiscount').classList.remove('hidden');
-                document.getElementById('price25').innerHTML = '<span class="line-through text-gray-400">$30</span> $15';
-                document.getElementById('price50').innerHTML = '<span class="line-through text-gray-400">$60</span> $30';
-                document.getElementById('price100').innerHTML = '<span class="line-through text-gray-400">$100</span> $50';
-            } else {
-                document.getElementById('betaDiscount').classList.add('hidden');
-                document.getElementById('price25').textContent = '$30';
-                document.getElementById('price50').textContent = '$60';
-                document.getElementById('price100').textContent = '$100';
-            }
-        }
+       // Purchase Functions
+async function updatePurchaseSection() {
+    // Clear any previous code redemption results
+    const resultDiv = document.getElementById('codeRedemptionResult');
+    if (resultDiv) {
+        resultDiv.classList.add('hidden');
+        resultDiv.textContent = '';
+    }
+    
+    // Update pricing display with discounts
+    await updatePricingDisplay();
+}
 
         async function purchaseCredits(amount) {
             const prices = { 20: 30, 50: 60, 100: 100 };
