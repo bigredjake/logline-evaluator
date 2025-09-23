@@ -520,23 +520,22 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <!-- Monthly Plan -->
-            <div class="border border-gray-200 rounded-lg p-6 text-center">
-                <h3 class="text-xl font-bold mb-2">Monthly</h3>
-                <div class="text-3xl font-bold text-red-600 mb-2" id="priceMonthly">$36</div>
-                <div class="text-gray-600 mb-4">billed monthly</div>
-                <ul class="text-sm text-gray-600 mb-6 space-y-2">
-                    <li>✓ Cancel anytime</li>
-                    <li>✓ Good for testing the waters</li>
-                </ul>
-                <button onclick="subscribe('monthly')" class="w-full py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                        style="background-color: #d9042b;">
-                    Choose Monthly
-                </button>
-                <p class="text-xs text-gray-500 mt-2">Most expensive option</p>
+<div class="border border-gray-400 rounded-lg p-6 text-center flex flex-col">
+    <h3 class="text-xl font-bold mb-2">Monthly</h3>
+    <div class="text-3xl font-bold text-red-600 mb-2" id="priceMonthly">$36</div>
+    <div class="text-gray-600 mb-4">billed monthly</div>
+    <ul class="text-sm text-gray-600 mb-6 space-y-2 flex-grow">
+        <li>✓ Cancel anytime</li>
+        <li>✓ Great for submission bursts</li>
+    </ul>
+    <button onclick="subscribe('monthly')" class="w-full py-2 px-4 bg-gray-700 text-white rounded-lg hover:bg-gray-800 mt-auto">
+        Choose Monthly
+    </button>
             </div>
 
             <!-- Quarterly Plan (Most Popular) -->
-            <div class="border-2 border-red-600 rounded-lg p-6 text-center relative">
+            <!-- Quarterly Plan (Most Popular) -->
+<div class="border-2 border-red-600 rounded-lg p-6 text-center relative flex flex-col">
                 <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-3 py-1 rounded-full text-sm">
                     Most Popular
                 </div>
@@ -544,19 +543,20 @@
                 <div class="text-3xl font-bold text-red-600 mb-2" id="priceQuarterly">$33</div>
                 <div class="text-sm text-gray-600 mb-1">per month • $99 billed</div>
                 <div class="text-sm text-gray-600 mb-4">every 3 months</div>
-                <ul class="text-sm text-gray-600 mb-6 space-y-2">
+                <ul class="text-sm text-gray-600 mb-6 space-y-2 flex-grow">
                     <li>✓ Save $36 a year</li>
-                    <li>✓ Balance of savings +</li>
-                    <li class="ml-4">flexibility</li>
+                    <li>✓ Equivalent of 1 month</li>
+                    <li class="ml-4">free</li>
                 </ul>
-                <button onclick="subscribe('quarterly')" class="w-full py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                <button onclick="subscribe('quarterly')" class="w-full py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 mt-auto"
                         style="background-color: #d9042b;">
                     Choose Quarterly
                 </button>
             </div>
 
             <!-- Annual Plan (Best Value) -->
-            <div class="border-2 border-green-600 rounded-lg p-6 text-center relative">
+           <!-- Annual Plan (Best Value) -->
+<div class="border-2 border-green-600 rounded-lg p-6 text-center relative flex flex-col">
                 <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-3 py-1 rounded-full text-sm">
                     Best Value
                 </div>
@@ -564,12 +564,12 @@
                 <div class="text-3xl font-bold text-green-600 mb-2" id="priceAnnual">$27</div>
                 <div class="text-sm text-gray-600 mb-1">per month • $324 billed</div>
                 <div class="text-sm text-gray-600 mb-4">annually</div>
-                <ul class="text-sm text-gray-600 mb-6 space-y-2">
+                <ul class="text-sm text-gray-600 mb-6 space-y-2 flex-grow">
                     <li>✓ Save $108 a year</li>
                     <li>✓ Equivalent of 3 months</li>
                     <li class="ml-4">free</li>
                 </ul>
-                <button onclick="subscribe('annual')" class="w-full py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                <button onclick="subscribe('annual')" class="w-full py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 mt-auto">
                     Choose Annual
                 </button>
             </div>
@@ -577,6 +577,7 @@
 
         <div class="text-center text-sm text-gray-500 mb-8">
             <p class="font-semibold mb-2">Cancel anytime • No long-term commitment • Secure payment by Stripe</p>
+<p class="text-xs text-gray-400 mt-1">Prices shown in USD. Sales tax may apply based on your location.</p>
         </div>
 
         <!-- Student Code Section -->
@@ -674,11 +675,11 @@ async function updatePricingDisplay() {
         const annualDiscounted = prices.annual * (1 - discount/100);
         
         document.getElementById('priceMonthly').innerHTML = 
-            `<span class="line-through text-gray-400">$${prices.monthly}</span> $${monthlyDiscounted.toFixed(0)}`;
+    `<span class="line-through text-gray-400">$${prices.monthly}</span> $${monthlyDiscounted.toFixed(0)}<br><span class="text-xs text-gray-500">First payment only</span>`;
         document.getElementById('priceQuarterly').innerHTML = 
-            `<span class="line-through text-gray-400">$${Math.round(prices.quarterly/3)}</span> $${Math.round(quarterlyDiscounted/3)}`;
-        document.getElementById('priceAnnual').innerHTML = 
-            `<span class="line-through text-gray-400">$${Math.round(prices.annual/12)}</span> $${Math.round(annualDiscounted/12)}`;
+    `<span class="line-through text-gray-400">$${Math.round(prices.quarterly/3)}</span> $${Math.round(quarterlyDiscounted/3)}<br><span class="text-xs text-gray-500">First payment: $${quarterlyDiscounted.toFixed(0)}, then $${prices.quarterly}</span>`;
+document.getElementById('priceAnnual').innerHTML = 
+    `<span class="line-through text-gray-400">$${Math.round(prices.annual/12)}</span> $${Math.round(annualDiscounted/12)}<br><span class="text-xs text-gray-500">First payment: $${annualDiscounted.toFixed(0)}, then $${prices.annual}</span>`;
     } else {
         document.getElementById('priceMonthly').textContent = `$${prices.monthly}`;
         document.getElementById('priceQuarterly').textContent = `$${Math.round(prices.quarterly/3)}`;
@@ -1314,7 +1315,7 @@ showApp();
             if (isNewUser()) {
                 alert('Welcome! To get started, you\'ll need to purchase some credits to evaluate your loglines.');
             } else {
-                alert('You\'re out of credits! Purchase more to continue using the logline evaluator.');
+                alert('Your access has expired! Subscribe to continue using the logline evaluator.');
             }
         }, 500);
     } else {
