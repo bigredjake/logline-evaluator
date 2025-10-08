@@ -1,37 +1,37 @@
 exports.handler = async (event, context) => {
+  const results = {};
+  
+  // Test 1: Can we fetch a simple external site?
   try {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_ANON_KEY;
-
-    // Try direct REST API call instead of using the client library
-    const response = await fetch(`${supabaseUrl}/rest/v1/user_profiles?select=id,email,user_type&limit=1`, {
-      method: 'GET',
+    const testResponse = await fetch('https://jsonplaceholder.typicode.com/posts/1');
+    results.externalFetchWorks = testResponse.ok;
+    results.externalStatus = testResponse.status;
+  } catch (error) {
+    results.externalFetchWorks = false;
+    results.externalError = error.message;
+  }
+  
+  // Test 2: What's the actual Supabase URL?
+  results.supabaseUrl = process.env.SUPABASE_URL;
+  results.hasAnonKey = !!process.env.SUPABASE_ANON_KEY;
+  results.anonKeyLength = process.env.SUPABASE_ANON_KEY ? process.env.SUPABASE_ANON_KEY.length : 0;
+  
+  // Test 3: Try Supabase
+  try {
+    const supabaseResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/`, {
       headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Content-Type': 'application/json'
+        'apikey': process.env.SUPABASE_ANON_KEY
       }
     });
-
-    const responseText = await response.text();
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ 
-        success: true,
-        statusCode: response.status,
-        responsePreview: responseText.substring(0, 200)
-      })
-    };
-
+    results.supabaseFetchWorks = true;
+    results.supabaseStatus = supabaseResponse.status;
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ 
-        success: false, 
-        error: error.message,
-        stack: error.stack
-      })
-    };
+    results.supabaseFetchWorks = false;
+    results.supabaseError = error.message;
   }
+  
+  return {
+    statusCode: 200,
+    body: JSON.stringify(results, null, 2)
+  };
 };
