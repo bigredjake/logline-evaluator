@@ -2,6 +2,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async (event, context) => {
   try {
+    // Create client with explicit fetch (Netlify Functions environment)
     const supabase = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_SERVICE_KEY,
@@ -9,6 +10,9 @@ exports.handler = async (event, context) => {
         auth: {
           autoRefreshToken: false,
           persistSession: false
+        },
+        global: {
+          fetch: fetch
         }
       }
     );
@@ -24,7 +28,7 @@ exports.handler = async (event, context) => {
         body: JSON.stringify({ 
           success: false, 
           error: error.message,
-          errorDetails: error
+          code: error.code
         })
       };
     }
@@ -44,8 +48,7 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ 
         success: false, 
         error: error.message,
-        errorName: error.name,
-        cause: error.cause ? error.cause.message : null
+        stack: error.stack
       })
     };
   }
