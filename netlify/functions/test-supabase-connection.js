@@ -1,4 +1,4 @@
-exports.handler = async (event, context) => {
+exports.handler = async (event, context) => { 
   const results = {};
   
   // Test 1: Can we fetch a simple external site?
