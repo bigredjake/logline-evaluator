@@ -2,19 +2,10 @@ const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async (event, context) => {
   try {
-    // Create client with explicit fetch (Netlify Functions environment)
+    // Use ANON key like the browser does
     const supabase = createClient(
       process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_KEY,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        },
-        global: {
-          fetch: fetch
-        }
-      }
+      process.env.SUPABASE_ANON_KEY
     );
 
     const { data, error } = await supabase
@@ -38,7 +29,8 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ 
         success: true, 
         message: 'Connection successful',
-        rowCount: data ? data.length : 0
+        rowCount: data ? data.length : 0,
+        sampleEmail: data && data[0] ? data[0].email : null
       })
     };
 
@@ -47,8 +39,7 @@ exports.handler = async (event, context) => {
       statusCode: 500,
       body: JSON.stringify({ 
         success: false, 
-        error: error.message,
-        stack: error.stack
+        error: error.message
       })
     };
   }
