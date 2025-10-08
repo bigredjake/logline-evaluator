@@ -2,6 +2,19 @@ const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async (event, context) => {
   try {
+    // Check if environment variables exist
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ 
+          success: false, 
+          error: 'Missing environment variables',
+          hasUrl: !!process.env.SUPABASE_URL,
+          hasKey: !!process.env.SUPABASE_SERVICE_KEY
+        })
+      };
+    }
+
     // Initialize Supabase client with service key
     const supabase = createClient(
       process.env.SUPABASE_URL,
