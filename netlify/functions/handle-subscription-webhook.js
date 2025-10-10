@@ -26,10 +26,10 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // Initialize Supabase
+  // Initialize Supabase with service role key for RLS bypass
   const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY
+    process.env.SUPABASE_SERVICE_KEY
   );
 
   // Handle the event
