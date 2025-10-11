@@ -63,27 +63,60 @@ exports.handler = async (event, context) => {
         break;
       }
 
-    case 'customer.subscription.updated':
-      case 'customer.subscription.deleted': {
+   case 'customer.subscription.updated': {
         const subscription = stripeEvent.data.object;
         const subscriptionId = subscription.id;
         const status = subscription.status;
-
-        // Update subscription status
+        
+        // Check if subscription is set to cancel at period end
+        let updateData = {
+          subscription_status: status,
+          updated_at: new Date().toISOString()
+        };
+        
+        if (subscription.cancel_at_period_end) {
+          // User canceled but still has access until period end
+          const periodEnd = new Date(subscription.current_period_end * 1000);
+          updateData.access_expiry = periodEnd.toISOString();
+          console.log(`Subscription ${subscriptionId} will cancel on ${periodEnd.toISOString()}`);
+        } else if (subscription.status === 'active') {
+          // Subscription is active and not canceling - clear access_expiry
+          updateData.access_expiry = null;
+        }
+        
+        const { error } = await supabase
+          .from('user_profiles')
+          .update(updateData)
+          .eq('subscription_id', subscriptionId);
+        
+        if (error) {
+          console.error('Error updating subscription:', error);
+          throw error;
+        }
+        
+        console.log(`Subscription ${subscriptionId} updated to status: ${status}`);
+        break;
+      }
+      
+      case 'customer.subscription.deleted': {
+        const subscription = stripeEvent.data.object;
+        const subscriptionId = subscription.id;
+        
+        // Subscription has actually ended - set status to canceled
         const { error } = await supabase
           .from('user_profiles')
           .update({
-            subscription_status: status,
+            subscription_status: 'canceled',
             updated_at: new Date().toISOString()
           })
           .eq('subscription_id', subscriptionId);
-
+        
         if (error) {
-          console.error('Error updating subscription status:', error);
+          console.error('Error updating canceled subscription:', error);
           throw error;
         }
-
-        console.log(`Subscription ${subscriptionId} updated to status: ${status}`);
+        
+        console.log(`Subscription ${subscriptionId} canceled and ended`);
         break;
       }
 
