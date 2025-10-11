@@ -399,6 +399,14 @@
                                     <p class="text-sm text-purple-800 font-semibold">Administrator - Unlimited Access</p>
                                 </div>
                             </div>
+                            <div id="subscriberUserPayment" class="hidden">
+    <div class="bg-gray-50 p-4 rounded-lg mb-4">
+        <p class="text-sm text-gray-600 mb-2">Status: <span id="subscriptionStatus"></span></p>
+    </div>
+    <button onclick="showSection('purchase')" class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+        Manage Subscription
+    </button>
+</div>
                         </div>
                     </div>
 
@@ -1232,10 +1240,25 @@ showApp();
         }
 
        function updateUI() {
-            if (!currentUserProfile) return;
+    if (!currentUserProfile) return;
 
-            const userStatus = document.getElementById('userStatus');
-            if (currentUserProfile.user_type === 'credits') {
+    const userStatus = document.getElementById('userStatus');
+    
+    if (currentUserProfile.user_type === 'subscriber') {
+        if (currentUserProfile.subscription_status === 'active') {
+            userStatus.textContent = 'Active Subscription';
+            userStatus.className = 'text-sm font-medium text-green-600';
+            userStatus.onclick = null;
+        } else if (currentUserProfile.subscription_status === 'past_due') {
+            userStatus.textContent = 'Payment Required';
+            userStatus.className = 'text-sm font-medium text-red-600 hover:text-red-800 cursor-pointer underline';
+            userStatus.onclick = function() { showSection('purchase'); };
+        } else {
+            userStatus.textContent = 'Manage Subscription';
+            userStatus.className = 'text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline';
+            userStatus.onclick = function() { showSection('purchase'); };
+        }
+    } else if (currentUserProfile.user_type === 'credits') {
                 userStatus.textContent = currentUserProfile.credits + ' credits remaining';
                 userStatus.className = 'text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline';
                 userStatus.onclick = function() {
@@ -1264,6 +1287,17 @@ showApp();
             if (currentUserProfile.user_type === 'credits') {
                 document.getElementById('creditUserPayment').classList.remove('hidden');
                 document.getElementById('currentCredits').textContent = currentUserProfile.credits;
+            } else if (currentUserProfile.user_type === 'subscriber') {
+    document.getElementById('subscriberUserPayment').classList.remove('hidden');
+    const status = currentUserProfile.subscription_status || 'unknown';
+    document.getElementById('subscriptionStatus').textContent = status.charAt(0).toUpperCase() + status.slice(1);
+    if (status === 'active') {
+        document.getElementById('subscriptionStatus').className = 'font-semibold text-green-600';
+    } else if (status === 'past_due') {
+        document.getElementById('subscriptionStatus').className = 'font-semibold text-red-600';
+    } else {
+        document.getElementById('subscriptionStatus').className = 'font-semibold text-gray-600';
+    }
             } else if (currentUserProfile.user_type === 'student') {
                 document.getElementById('studentUserPayment').classList.remove('hidden');
                 const daysLeft = calculateDaysRemaining(currentUserProfile.access_expiry);
