@@ -35,17 +35,19 @@ exports.handler = async (event, context) => {
   // Handle the event
   try {
     switch (stripeEvent.type) {
-     case 'checkout.session.completed': {
+    case 'checkout.session.completed': {
         const session = stripeEvent.data.object;
         const userId = session.metadata.userId;
         const subscriptionId = session.subscription;
+        const stripeCustomerId = session.customer;
         
-        // Update user to subscriber type with subscription ID
+        // Update user to subscriber type with subscription ID and customer ID
         const { error } = await supabase
           .from('user_profiles')
           .update({
             user_type: 'subscriber',
             subscription_id: subscriptionId,
+            stripe_customer_id: stripeCustomerId,
             subscription_status: 'active',
             last_payment_date: new Date().toISOString(),
             updated_at: new Date().toISOString()
