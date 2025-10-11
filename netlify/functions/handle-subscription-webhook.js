@@ -60,7 +60,7 @@ exports.handler = async (event, context) => {
         break;
       }
 
-      case 'customer.subscription.updated':
+    case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
         const subscription = stripeEvent.data.object;
         const subscriptionId = subscription.id;
@@ -81,6 +81,28 @@ exports.handler = async (event, context) => {
         }
 
         console.log(`Subscription ${subscriptionId} updated to status: ${status}`);
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = stripeEvent.data.object;
+        const subscriptionId = invoice.subscription;
+
+        // Update user status to past_due when payment fails
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({
+            subscription_status: 'past_due',
+            updated_at: new Date().toISOString()
+          })
+          .eq('subscription_id', subscriptionId);
+
+        if (error) {
+          console.error('Error updating user after payment failure:', error);
+          throw error;
+        }
+
+        console.log(`Payment failed for subscription ${subscriptionId} - status set to past_due`);
         break;
       }
 
