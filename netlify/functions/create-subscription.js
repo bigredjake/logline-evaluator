@@ -33,8 +33,8 @@ exports.handler = async (event, context) => {
       metadata: {
         userId: userId,
       },
-      success_url: `${process.env.DEPLOY_PRIME_URL || process.env.URL}?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.DEPLOY_PRIME_URL || process.env.URL}?subscription=cancelled`,
+     success_url: `${process.env.BRANCH_URL || process.env.URL}?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.BRANCH_URL || process.env.URL}?subscription=cancelled`,
     });
 
     return {
