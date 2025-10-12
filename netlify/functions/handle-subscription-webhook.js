@@ -1,5 +1,67 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY_TEST);
 const { createClient } = require('@supabase/supabase-js');
+const emailjs = require('@emailjs/nodejs');
+
+// Email helper function
+async function sendSubscriptionEmail(toEmail, emailType, data = {}) {
+  const emailContent = {
+    welcome: {
+      subject: 'Welcome to BRS Labs Logline Evaluator!',
+      message: `Hi ${data.userName || toEmail.split('@')[0]},
+
+Welcome to the BRS Labs Logline Evaluator! Your subscription is now active.
+
+🎉 You now have unlimited access to professional logline evaluations while your subscription is active!
+
+🔖 BOOKMARK THIS LINK: ${data.siteUrl || 'https://logline-evaluator.netlify.app'}
+
+Ready to get started?
+1. Click the link above to access the evaluator
+2. Fill out the logline form with your story details
+3. Get instant professional feedback on your logline
+4. Use the suggestions to refine and improve
+
+Your subscription includes:
+- Unlimited logline evaluations
+- Professional-quality feedback
+- Alternative logline suggestions
+- Title recommendations
+
+Need help? Contact us at support@bigredstripe.com
+
+Happy writing!
+The BRS Labs Team`
+    }
+  };
+
+  const content = emailContent[emailType];
+  if (!content) {
+    console.error(`Unknown email type: ${emailType}`);
+    return;
+  }
+
+  const templateParams = {
+    to_email: toEmail,
+    user_name: toEmail.split('@')[0],
+    subject: content.subject,
+    message: content.message,
+    timestamp: Date.now()
+  };
+
+  try {
+    await emailjs.send(
+      'service_z3nppt7',
+      'template_8xpn9tn',
+      templateParams,
+      {
+        publicKey: '7cimGrBdlHCn4gSDy',
+      }
+    );
+    console.log(`${emailType} email sent successfully to ${toEmail}`);
+  } catch (error) {
+    console.error(`Failed to send ${emailType} email:`, error);
+  }
+}
 
 exports.handler = async (event, context) => {
   // Only allow POST requests
@@ -40,6 +102,7 @@ exports.handler = async (event, context) => {
         const userId = session.metadata.userId;
         const subscriptionId = session.subscription;
         const stripeCustomerId = session.customer;
+        const customerEmail = session.customer_email || session.customer_details?.email;
         
         // Update user to subscriber type with subscription ID and customer ID
         const { error } = await supabase
@@ -53,13 +116,22 @@ exports.handler = async (event, context) => {
             updated_at: new Date().toISOString()
           })
           .eq('id', userId);
-
+        
         if (error) {
           console.error('Error updating user after checkout:', error);
           throw error;
         }
-
+        
         console.log(`User ${userId} subscribed with subscription ${subscriptionId}`);
+        
+        // Send welcome email
+        if (customerEmail) {
+          await sendSubscriptionEmail(customerEmail, 'welcome', {
+            userName: customerEmail.split('@')[0],
+            siteUrl: process.env.URL || 'https://logline-evaluator.netlify.app'
+          });
+        }
+        
         break;
       }
 
