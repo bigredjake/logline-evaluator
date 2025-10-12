@@ -4,6 +4,7 @@
   "description": "BRS Labs Logline Evaluator",
   "dependencies": {
     "stripe": "^10.0.0",
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.39.0",
+    "@emailjs/nodejs": "^4.0.3"
   }
 }
