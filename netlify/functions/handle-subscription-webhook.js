@@ -1,15 +1,14 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY_TEST);
 const { createClient } = require('@supabase/supabase-js');
-const emailjs = require('@emailjs/nodejs');
 
-// Email helper function
+// Email helper function using fetch (REST API)
 async function sendSubscriptionEmail(toEmail, emailType, data = {}) {
   const emailContent = {
     welcome: {
-      subject: 'Welcome to BRS Labs Logline Evaluator!',
+      subject: 'Your Subscription is Active!',
       message: `Hi ${data.userName || toEmail.split('@')[0]},
 
-Welcome to the BRS Labs Logline Evaluator! Your subscription is now active.
+Your subscription to the BRS Labs Logline Evaluator is now active!
 
 🎉 You now have unlimited access to professional logline evaluations while your subscription is active!
 
@@ -49,15 +48,24 @@ The BRS Labs Team`
   };
 
   try {
-    await emailjs.send(
-      'service_z3nppt7',
-      'template_8xpn9tn',
-      templateParams,
-      {
-        publicKey: '7cimGrBdlHCn4gSDy',
-      }
-    );
-    console.log(`${emailType} email sent successfully to ${toEmail}`);
+    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        service_id: 'service_z3nppt7',
+        template_id: 'template_8xpn9tn',
+        user_id: '7cimGrBdlHCn4gSDy',
+        template_params: templateParams
+      })
+    });
+
+    if (response.ok) {
+      console.log(`${emailType} email sent successfully to ${toEmail}`);
+    } else {
+      console.error(`Failed to send ${emailType} email:`, response.status);
+    }
   } catch (error) {
     console.error(`Failed to send ${emailType} email:`, error);
   }
