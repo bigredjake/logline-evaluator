@@ -1358,25 +1358,32 @@ showApp();
                 return;
             }
 
-            if (currentUserProfile.user_type === 'credits' && currentUserProfile.credits <= 0) {
-                showSection('purchase');
-                alert('You have no credits remaining. Please purchase more credits to continue.');
-                return;
+           // Check subscription status for subscribers
+            if (currentUserProfile.user_type === 'subscriber') {
+                if (currentUserProfile.subscription_status !== 'active') {
+                    alert('Your subscription is not active. Please update your payment method or resubscribe.');
+                    showSection('purchase');
+                    return;
+                }
             }
 
-            if (currentUserProfile.user_type === 'student' && new Date(currentUserProfile.access_expiry) < new Date()) {
-                alert('Your student access has expired. Please purchase credits to continue.');
-                showSection('purchase');
-                return;
-            }
-
-            // Show confirmation modal for credit users only
+            // Legacy credits users must subscribe
             if (currentUserProfile.user_type === 'credits') {
-                showCreditConfirmation();
+                alert('Credit-based access has ended. Please subscribe for unlimited evaluations.');
+                showSection('purchase');
                 return;
             }
 
-            // For admin and student users, proceed directly
+            // Student users - check if expired
+            if (currentUserProfile.user_type === 'student') {
+                if (new Date(currentUserProfile.access_expiry) < new Date()) {
+                    alert('Your student access has expired. Please subscribe to continue.');
+                    showSection('purchase');
+                    return;
+                }
+            }
+
+            // Admin and valid students/subscribers proceed directly
             performEvaluation(formData);
         }
 
@@ -1444,26 +1451,9 @@ if (currentUserProfile.user_type === 'student') {
                 const data = await response.json();
                 const claudeResponse = data.evaluation;
 
-                // Deduct credit for non-admin users
-                if (currentUserProfile.user_type === 'credits') {
-                    const newCredits = currentUserProfile.credits - 1;
-                    const updateResult = await window.dbHelpers.updateUserCredits(currentUser.id, newCredits);
-                    
-                    if (updateResult.success) {
-                        currentUserProfile.credits = newCredits;
-                        
-                        if (newCredits === 10 || newCredits === 5) {
-                            setTimeout(function() {
-                                alert('You have ' + newCredits + ' credits remaining. Consider purchasing more!');
-                            }, 2000);
-                        } else if (newCredits === 0) {
-                            setTimeout(function() {
-                                alert('You\'re out of credits! Purchase more to continue using the evaluator.');
-                            }, 2000);
-                        }
-                    }
-                }
-
+            // No credit deduction for subscribers - they have unlimited access
+                // Legacy credit users are handled in pre-evaluation checks
+                
              // Save submission to database
 const submissionResult = await window.dbHelpers.createSubmission(
     currentUser.id,
@@ -2301,19 +2291,15 @@ async function generateStudentCodes() {
         return; // Student access still valid
     }
     
-    // Student access has expired - convert to credits user with 3 free credits
+    // Student access has expired - require subscription purchase
     try {
-      // Preserve existing credits and add 3 bonus credits
-const existingCredits = currentUserProfile.credits || 0;
-const newCredits = existingCredits + 3;
-
-const updateResult = await window.supabase
-    .from('user_profiles')
-    .update({
-        user_type: 'credits',
-        credits: newCredits,
-        access_expiry: null
-    })
+        const updateResult = await window.supabase
+            .from('user_profiles')
+            .update({
+                user_type: 'subscriber',
+                subscription_status: 'expired',
+                access_expiry: null
+            })
             .eq('id', currentUser.id)
             .select()
             .single();
@@ -2325,9 +2311,10 @@ const updateResult = await window.supabase
             // Send email notification
             await sendConversionEmail();
             
-            // Show notification to user
+            // Show notification to user and redirect to purchase
             setTimeout(() => {
-               alert('Your student access has expired. You\'ve been converted to a credits user with 3 free bonus credits. If you were previously a credits user, your remaining credits have been restored plus the 3 free bonus credits.');
+                alert('Your student access has expired. Please subscribe to continue using the Logline Evaluator.');
+                showSection('purchase');
             }, 1000);
         }
     } catch (error) {
@@ -2343,13 +2330,18 @@ async function sendConversionEmail() {
             subject: 'Your BRS Labs Student Access Has Expired',
             message: `Hi ${currentUser.email.split('@')[0]},
 
-Your student access to the BRS Labs Logline Evaluator has expired.
+Your student access to the Logline Evaluator has expired.
 
-We've converted you to a credits user with 3 free bonus credits. If you were previously a credits user, your remaining credits have been restored plus the 3 free bonus credits.
+To continue using the Logline Evaluator, you'll need to subscribe for access.
 
-You can continue using the Logline Evaluator here: ${window.location.origin}
+Access the app here: ${window.location.origin}
 
-You can purchase additional credits anytime from within the app.
+Choose the subscription plan that works for you:
+- Monthly: $36/month
+- Quarterly: $99/quarter (save $9)
+- Annual: $324/year (save $108)
+
+All plans include unlimited logline evaluations for the duration of your subscription.
 
 Thanks for using the Logline Evaluator!
 
