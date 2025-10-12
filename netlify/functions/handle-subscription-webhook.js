@@ -142,6 +142,35 @@ exports.handler = async (event, context) => {
         break;
       }
 
+        case 'invoice.paid': {
+        const invoice = stripeEvent.data.object;
+        const subscriptionId = invoice.subscription;
+        
+        // Only process subscription invoices (not one-time payments)
+        if (!subscriptionId) {
+          console.log('Invoice paid but not for a subscription, skipping');
+          break;
+        }
+        
+        // Update last_payment_date when subscription renews successfully
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({
+            subscription_status: 'active',
+            last_payment_date: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('subscription_id', subscriptionId);
+        
+        if (error) {
+          console.error('Error updating user after successful renewal:', error);
+          throw error;
+        }
+        
+        console.log(`Subscription ${subscriptionId} renewed successfully - last_payment_date updated`);
+        break;
+      }
+
       default:
         console.log(`Unhandled event type: ${stripeEvent.type}`);
     }
