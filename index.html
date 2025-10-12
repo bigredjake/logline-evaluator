@@ -1158,11 +1158,8 @@ if (!limitCheck.allowed) {
                 currentUser = authResult.data.user;
                 currentUserProfile = userProfile;
                 
-               // Step 7: Welcome email will be sent after subscription purchase via webhook
-                // (Students still get email since they have immediate access)
-                if (userProfile.user_type === 'student') {
-                    await sendWelcomeEmail(userProfile.user_type, userProfile.credits, userProfile.access_expiry);
-                }
+              // Step 7: Send welcome email
+                await sendWelcomeEmail(userProfile.user_type, userProfile.credits, userProfile.access_expiry);
                 
 // Step 8: Success!
 alert('Account created successfully! Welcome to the Logline Evaluator.');
