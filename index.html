@@ -1158,8 +1158,11 @@ if (!limitCheck.allowed) {
                 currentUser = authResult.data.user;
                 currentUserProfile = userProfile;
                 
-                // Step 7: Send welcome email
-await sendWelcomeEmail(userProfile.user_type, userProfile.credits, userProfile.access_expiry);
+               // Step 7: Welcome email will be sent after subscription purchase via webhook
+                // (Students still get email since they have immediate access)
+                if (userProfile.user_type === 'student') {
+                    await sendWelcomeEmail(userProfile.user_type, userProfile.credits, userProfile.access_expiry);
+                }
                 
 // Step 8: Success!
 alert('Account created successfully! Welcome to the Logline Evaluator.');
@@ -2361,14 +2364,12 @@ The BRS Labs Team`
         async function sendWelcomeEmail(userType, credits = 0, accessExpiry = null) {
     try {
         let accessInfo;
-if (userType === 'student') {
-    const expiry = new Date(accessExpiry);
-    accessInfo = `You have unlimited access until ${expiry.toLocaleDateString()}. After that, you'll need to purchase credits to continue using the evaluator.`;
-} else if (credits > 0) {
-    accessInfo = `You have ${credits} credits ready to use. Each evaluation uses 1 credit.`;
-} else {
-    accessInfo = `To get started, you'll need to purchase credits. Each evaluation uses 1 credit, and you can purchase credits anytime from within the app.`;
-}
+        if (userType === 'student') {
+            const expiry = new Date(accessExpiry);
+            accessInfo = `You have unlimited access until ${expiry.toLocaleDateString()}. After that, you'll need to subscribe to continue using the evaluator.`;
+        } else {
+            accessInfo = `To get started, you'll need to subscribe for unlimited access. Choose from flexible monthly, quarterly, or annual plans.`;
+        }
 
         const templateParams = {
             to_email: currentUser.email,
@@ -2385,10 +2386,10 @@ ${accessInfo}
 
 Ready to get started? Here are your next steps:
 1. Click the link above to access the evaluator
-2. Add credits if you haven't or a code if you have one
-3. Fill out the logline form with your story details  
+2. Choose a subscription plan or redeem a student code if you have one
+3. Fill out the logline form with your story details
 4. Get instant professional feedback on your logline
-5. Use our suggestions to refine and improve your logline
+5. Use the suggestions to refine and improve your logline
 
 Need help? Check out our Getting Started guide or the FAQs at the bottom of the app... or contact us at support@bigredstripe.com
 
