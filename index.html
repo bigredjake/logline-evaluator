@@ -1341,11 +1341,37 @@ try {
     console.error('Error fetching users count:', error);
 }
             
-            // Get all submissions
-            const submissionsResult = await window.dbHelpers.getAllSubmissions();
-            const totalEvaluations = submissionsResult.success ? submissionsResult.data.length : 0;
-            
-           // Get all student codes via backend function
+           // Get all submissions via backend function
+let totalEvaluations = 0;
+let totalSubmissions = 0;
+let submissions30Days = 0;
+try {
+    const response = await fetch('/.netlify/functions/admin-get-submissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            adminUserId: currentUser.id
+        })
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.submissions) {
+        totalSubmissions = result.submissions.length;
+        totalEvaluations = totalSubmissions; // Same value for now
+        
+        // Calculate submissions in last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        submissions30Days = result.submissions.filter(sub => 
+            new Date(sub.timestamp) >= thirtyDaysAgo
+        ).length;
+    }
+} catch (error) {
+    console.error('Error fetching submissions count:', error);
+}
+
+// Get all student codes via backend function
 let totalCodes = 0;
 try {
     const response = await fetch('/.netlify/functions/admin-get-codes', {
@@ -1365,20 +1391,19 @@ try {
 } catch (error) {
     console.error('Error fetching codes count:', error);
 }
-            
-           // Calculate users by phase (simplified - just show current totals)
-            const currentPhase = PHASE_CONFIG.currentPhase;
-            const currentLimit = getTotalUserLimit();
-            const limitText = currentLimit === -1 ? 'Unlimited' : currentLimit;
 
-            document.getElementById('totalUsers').textContent = `${totalUsers} / ${limitText}`;
-            document.getElementById('totalEvaluations').textContent = totalEvaluations;
-
-            // Add phase info
-            document.getElementById('totalUsers').parentElement.querySelector('.text-sm').textContent = `Phase ${currentPhase} Users`;
-            document.getElementById('codesCount').textContent = totalCodes;
-            document.getElementById('submissionsCount').textContent = totalEvaluations;
-            document.getElementById('userCount').textContent = totalUsers;
+// Calculate users by phase (simplified - just show current totals)
+const currentPhase = PHASE_CONFIG.currentPhase;
+const currentLimit = getTotalUserLimit();
+const limitText = currentLimit === -1 ? 'Unlimited' : currentLimit;
+document.getElementById('totalUsers').textContent = `${totalUsers} / ${limitText}`;
+document.getElementById('totalEvaluations').textContent = totalEvaluations;
+document.getElementById('totalSubmissions').textContent = totalSubmissions;
+document.getElementById('submissions30Days').textContent = submissions30Days;
+// Add phase info
+document.getElementById('totalUsers').parentElement.querySelector('.text-sm').textContent = `Phase ${currentPhase} Users`;
+document.getElementById('codesCount').textContent = totalCodes;
+document.getElementById('userCount').textContent = totalUsers;
         }
 
         // Core App Functions
