@@ -2138,14 +2138,22 @@ const submissionResult = await window.dbHelpers.createSubmission(
         }
 
         async function viewAllUsers() {
-            const usersResult = await window.dbHelpers.getAllUsers();
-            
-            if (!usersResult.success) {
-                alert('Failed to load users: ' + usersResult.error);
-                return;
-            }
-            
-            const users = usersResult.data.filter(u => !u.is_admin);
+    try {
+        const response = await fetch('/.netlify/functions/admin-get-users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                adminUserId: currentUser.id
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to load users');
+        }
+        
+        const users = result.users.filter(u => !u.is_admin);
             
             if (users.length === 0) {
                 alert('No users have registered yet.');
