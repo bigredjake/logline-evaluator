@@ -2001,13 +2001,28 @@ const submissionResult = await window.dbHelpers.createSubmission(
 }
 
    // FIXED: Download codes with proper user info
-        async function downloadCodes() {
-            const codesResult = await window.dbHelpers.getAllStudentCodes();
-            
-            if (!codesResult.success || codesResult.data.length === 0) {
-                alert('No student codes available to download');
-                return;
-            }
+       async function downloadCodes() {
+    try {
+        const response = await fetch('/.netlify/functions/admin-get-codes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                adminUserId: currentUser.id
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to load codes');
+        }
+        
+        if (!result.codes || result.codes.length === 0) {
+            alert('No student codes available to download');
+            return;
+        }
+        
+        const codesResult = { success: true, data: result.codes };
 
             // Create CSV content with proper user lookup
             const headers = ['Code', 'Type', 'Months', 'Credits', 'Created Date', 'Status', 'Used By Email', 'Used Date', 'Times Used'];
