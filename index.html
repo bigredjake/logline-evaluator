@@ -1321,9 +1321,26 @@ showApp();
             const submissionsResult = await window.dbHelpers.getAllSubmissions();
             const totalEvaluations = submissionsResult.success ? submissionsResult.data.length : 0;
             
-            // Get all student codes
-            const codesResult = await window.dbHelpers.getAllStudentCodes();
-            const totalCodes = codesResult.success ? codesResult.data.length : 0;
+           // Get all student codes via backend function
+let totalCodes = 0;
+try {
+    const response = await fetch('/.netlify/functions/admin-get-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            adminUserId: currentUser.id
+        })
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.codes) {
+        // Count only unused codes (your preference)
+        totalCodes = result.codes.filter(code => !code.used).length;
+    }
+} catch (error) {
+    console.error('Error fetching codes count:', error);
+}
             
            // Calculate users by phase (simplified - just show current totals)
             const currentPhase = PHASE_CONFIG.currentPhase;
