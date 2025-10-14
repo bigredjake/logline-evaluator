@@ -485,26 +485,34 @@
                                 </button>
                             </div>
 
-                            <!-- Analytics -->
-                            <div class="space-y-4">
-                                <h4 class="text-lg font-medium text-gray-900">Analytics</h4>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="bg-gray-50 p-4 rounded-lg text-center">
-                                        <div class="text-2xl font-bold text-red-600" id="totalUsers">0</div>
-                                        <div class="text-sm text-gray-600">Total Users</div>
-                                    </div>
-                                    <div class="bg-gray-50 p-4 rounded-lg text-center">
-                                        <div class="text-2xl font-bold text-red-600" id="totalEvaluations">0</div>
-                                        <div class="text-sm text-gray-600">Total Evaluations</div>
-                                    </div>
-                                </div>
-                                <button id="downloadAllSubmissionsBtn" class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg">
-                                    Download All Submissions (<span id="submissionsCount">0</span>)
-                                </button>
-                                <button id="viewUsersBtn" class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg mb-2">
-                                    View All Users (<span id="userCount">0</span>)
-                                </button>
-                            </div>
+                           <!-- Analytics -->
+<div class="space-y-4">
+    <h4 class="text-lg font-medium text-gray-900">Analytics</h4>
+    <div class="grid grid-cols-2 gap-4">
+        <div class="bg-gray-50 p-4 rounded-lg text-center">
+            <div class="text-2xl font-bold text-red-600" id="totalUsers">0</div>
+            <div class="text-sm text-gray-600">Total Users</div>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg text-center">
+            <div class="text-2xl font-bold text-red-600" id="totalEvaluations">0</div>
+            <div class="text-sm text-gray-600">Total Evaluations</div>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg text-center">
+            <div class="text-2xl font-bold text-red-600" id="totalSubmissions">0</div>
+            <div class="text-sm text-gray-600">Total Submissions</div>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg text-center">
+            <div class="text-2xl font-bold text-red-600" id="submissions30Days">0</div>
+            <div class="text-sm text-gray-600">Last 30 Days</div>
+        </div>
+    </div>
+    <button id="downloadAllSubmissionsBtn" class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg">
+        Download All Submissions
+    </button>
+    <button id="viewUsersBtn" class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg mb-2">
+        View All Users (<span id="userCount">0</span>)
+    </button>
+</div>
                         </div>
                     </div>
                 </div>
