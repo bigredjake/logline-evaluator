@@ -202,9 +202,14 @@
             Submit information in each of the fields. The more information you include, the better your results. You will get feedback on your logline, five improved alternatives, and some possible title suggestions.
         </p>
     </div>
-    <button id="loadLastDataBtn" class="hidden px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors ml-4 whitespace-nowrap">
+    <div class="flex space-x-2 ml-4">
+    <button id="loadLastDataBtn" class="hidden px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors whitespace-nowrap">
         Load Last Logline Data
     </button>
+    <button id="startFreshBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors whitespace-nowrap">
+        Start Fresh
+    </button>
+</div>
 </div>
                     </div>
 
@@ -839,6 +844,7 @@ if (portalReturn === 'return') {
                 performEvaluation();
             });
             document.getElementById('loadLastDataBtn').addEventListener('click', loadLastSubmissionData);
+            document.getElementById('startFreshBtn').addEventListener('click', clearLoglineForm);
 
             // Password strength listeners
             document.getElementById('authPassword').addEventListener('input', function() {
@@ -1230,7 +1236,6 @@ showApp();
 
             if (section === 'logline') {
     document.getElementById('loglineSection').classList.remove('hidden');
-    loadUserFormData();
     checkAndShowGettingStarted();
     
     // Show "Load Last Data" button only if user has history
