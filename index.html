@@ -2812,15 +2812,38 @@ async function setUserTime() {
             }
         }
 
-        function viewHistoryItem(submissionId) {
-            // Find the submission from current loaded data or fetch it
-            // For now, we'll implement a simple version that sets currentEvaluation
-            // In a more robust implementation, you'd fetch the specific submission
-            
-            // This is a simplified implementation - in practice you'd want to fetch the submission by ID
-            showSection('results');
+        async function viewHistoryItem(submissionId) {
+    try {
+        // Fetch the specific submission
+        const { data: submission, error } = await window.supabase
+            .from('submissions')
+            .select('*')
+            .eq('id', submissionId)
+            .eq('user_id', currentUser.id)
+            .single();
+        
+        if (error || !submission) {
+            console.error('Error loading submission:', error);
+            alert('Failed to load evaluation');
+            return;
         }
-
+        
+        // Set as current evaluation
+        currentEvaluation = submission;
+        
+        // Populate the results section
+        document.getElementById('originalLogline').textContent = '"' + submission.form_data.logline + '"';
+        document.getElementById('evaluationResult').textContent = submission.claude_response;
+        
+        // Show results section
+        showSection('results');
+        
+    } catch (error) {
+        console.error('Error viewing history item:', error);
+        alert('Failed to load evaluation');
+    }
+}
+    
         async function downloadHistoryPDF(submissionId) {
             try {
                 // Fetch the specific submission
