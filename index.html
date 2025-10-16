@@ -196,16 +196,16 @@
                 <div class="bg-white rounded-lg shadow-lg p-8">
                     <div class="mb-8">
                         <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h2 class="text-3xl font-bold text-black mb-4">Get Logline Feedback</h2>
-                                <p class="text-gray-600 text-lg">
-                                    Submit information in each of the fields. The more information you include, the better your results. You will get feedback on your logline, five improved alternatives, and some possible title suggestions.
-                                </p>
-                            </div>
-                            <button id="startFreshBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors ml-4 whitespace-nowrap">
-                                Start Fresh
-                            </button>
-                        </div>
+    <div>
+        <h2 class="text-3xl font-bold text-black mb-4">Get Logline Feedback</h2>
+        <p class="text-gray-600 text-lg">
+            Submit information in each of the fields. The more information you include, the better your results. You will get feedback on your logline, five improved alternatives, and some possible title suggestions.
+        </p>
+    </div>
+    <button id="loadLastDataBtn" class="hidden px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors ml-4 whitespace-nowrap">
+        Load Last Logline Data
+    </button>
+</div>
                     </div>
 
                     <div class="space-y-6">
@@ -838,7 +838,7 @@ if (portalReturn === 'return') {
                 hideCreditConfirmation();
                 performEvaluation();
             });
-            document.getElementById('startFreshBtn').addEventListener('click', clearLoglineForm);
+            document.getElementById('loadLastDataBtn').addEventListener('click', loadLastSubmissionData);
 
             // Password strength listeners
             document.getElementById('authPassword').addEventListener('input', function() {
@@ -1219,7 +1219,6 @@ showApp();
     }
     
     updateUI();
-    loadLastSubmissionData();
 }
 
         async function showSection(section) {
@@ -1230,10 +1229,24 @@ showApp();
             document.getElementById('purchaseSection').classList.add('hidden');
 
             if (section === 'logline') {
-                document.getElementById('loglineSection').classList.remove('hidden');
-                loadUserFormData();
-                checkAndShowGettingStarted();
-            } else if (section === 'history') {
+    document.getElementById('loglineSection').classList.remove('hidden');
+    loadUserFormData();
+    checkAndShowGettingStarted();
+    
+    // Show "Load Last Data" button only if user has history
+    if (currentUser) {
+        try {
+            const submissionsResult = await window.dbHelpers.getUserSubmissions(currentUser.id);
+            if (submissionsResult.success && submissionsResult.data.length > 0) {
+                document.getElementById('loadLastDataBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('loadLastDataBtn').classList.add('hidden');
+            }
+        } catch (error) {
+            document.getElementById('loadLastDataBtn').classList.add('hidden');
+        }
+    }
+} else if (section === 'history') {
                 document.getElementById('historySection').classList.remove('hidden');
                 loadHistory();
             } else if (section === 'settings') {
