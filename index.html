@@ -2224,7 +2224,7 @@ const submissionResult = await window.dbHelpers.createSubmission(
             throw new Error(result.error || 'Failed to load users');
         }
         
-        const users = result.users.filter(u => !u.is_admin);
+        const users = result.users.filter(u => !u.is_admin).sort((a, b) => a.email.localeCompare(b.email));
         
         if (users.length === 0) {
             alert('No users have registered yet.');
