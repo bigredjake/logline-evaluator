@@ -977,23 +977,19 @@ async function updatePasswordFromReset(token) {
             }
 
            if (currentView === 'register') {
-                const confirmPassword = document.getElementById('confirmPassword').value;
-                const studentCode = document.getElementById('studentCode').value;
-
-                if (password !== confirmPassword) {
-                    alert('Passwords do not match');
-                    return;
-                }
-
-                if (!validatePassword(password)) {
-                    alert('Password does not meet requirements');
-                    return;
-                }
-
-                await register(email, password, studentCode);
-            } else {
-                await login(email, password);
-            }
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    if (password !== confirmPassword) {
+        alert('Passwords do not match');
+        return;
+    }
+    if (!validatePassword(password)) {
+        alert('Password does not meet requirements');
+        return;
+    }
+    await register(email, password, '');
+} else {
+    await login(email, password);
+}
         }
 
         async function login(email, password) {
