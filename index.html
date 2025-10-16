@@ -2250,6 +2250,7 @@ const submissionResult = await window.dbHelpers.createSubmission(
                                     <tr>
                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Account Status</th>
 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sub Status</th>
 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Access Expiry</th>
 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
@@ -2560,11 +2561,12 @@ The BRS Labs Team`,
     return `
         <tr>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.email}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.user_type}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${subStatus}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${accessExpiry}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(user.created_at)}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.user_type}</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${statusColor}">${statusText}</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${subStatus}</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${accessExpiry}</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(user.created_at)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
     ${status === 'active' ? 
         `<button onclick="suspendUser('${user.email}')" class="text-yellow-600 hover:text-yellow-900">Suspend</button>` :
         status === 'suspended' ? 
