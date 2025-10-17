@@ -1045,24 +1045,15 @@ if (!limitCheck.allowed) {
                 
                 let userProfile = profileResult.data;
                 
-          // Step 4: If student code was provided, update the profile
+          // Step 4: If student code was provided, update the profile (time-based only)
                 if (validatedCode) {
-                    let updateData = {};
-                    
-                    if (validatedCode.code_type === 'credit_based') {
-                        // Credit-based code: add credits, keep as 'credits' type
-                        updateData = {
-                            credits: validatedCode.credits
-                        };
-                    } else {
-                        // Time-based code: set as student with expiry
-                        const expiry = new Date();
-                        expiry.setMonth(expiry.getMonth() + validatedCode.months);
-                        updateData = {
-                            user_type: 'student',
-                            access_expiry: expiry.toISOString()
-                        };
-                    }
+                    // Time-based code: set as student with expiry
+                    const expiry = new Date();
+                    expiry.setMonth(expiry.getMonth() + validatedCode.months);
+                    const updateData = {
+                        user_type: 'student',
+                        access_expiry: expiry.toISOString()
+                    };
                     
                     const updateResult = await window.supabase
                         .from('user_profiles')
@@ -1085,28 +1076,14 @@ if (!limitCheck.allowed) {
                     }
                 }
                 
-                // Step 5: For admin users, make sure they have unlimited credits
-                if (userProfile.is_admin) {
-                    const adminUpdateResult = await window.supabase
-                        .from('user_profiles')
-                        .update({ credits: 999999 })
-                        .eq('id', newUserId)
-                        .select()
-                        .single();
-                    
-                    if (adminUpdateResult.error) {
-                        console.error('Failed to set admin credits:', adminUpdateResult.error);
-                    } else {
-                        userProfile = adminUpdateResult.data;
-                    }
-                }
+                // Step 5: Admins have unlimited access by default (no special setup needed)
                 
                 // Step 6: Set current user data
                 currentUser = authResult.data.user;
                 currentUserProfile = userProfile;
                 
               // Step 7: Send welcome email
-                await sendWelcomeEmail(userProfile.user_type, userProfile.credits, userProfile.access_expiry);
+                await sendWelcomeEmail(userProfile.user_type, userProfile.access_expiry);
                 
 // Step 8: Success!
 alert('Account created successfully! Welcome to the Logline Evaluator.');
@@ -2398,7 +2375,7 @@ The BRS Labs Team`
     }
 }
 
-        async function sendWelcomeEmail(userType, credits = 0, accessExpiry = null) {
+        async function sendWelcomeEmail(userType, accessExpiry = null) {
     try {
         let accessInfo;
         if (userType === 'student') {
