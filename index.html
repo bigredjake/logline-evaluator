@@ -1217,12 +1217,6 @@ showApp();
             userStatus.className = 'text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline';
             userStatus.onclick = function() { showSection('purchase'); };
         }
-    } else if (currentUserProfile.user_type === 'credits') {
-                userStatus.textContent = currentUserProfile.credits + ' credits remaining';
-                userStatus.className = 'text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline';
-                userStatus.onclick = function() {
-                    showSection('purchase');
-                };
             } else if (currentUserProfile.user_type === 'student') {
                 const daysLeft = calculateDaysRemaining(currentUserProfile.access_expiry);
                 userStatus.textContent = daysLeft + ' days remaining';
@@ -2459,14 +2453,11 @@ The BRS Labs Team`,
     }
 }
         
-        function shouldRedirectToPurchase() {
-            // Only redirect credits users with 0 credits
-            if (currentUserProfile && currentUserProfile.user_type === 'credits' && currentUserProfile.credits <= 0) {
-                return true;
-            }
+       function shouldRedirectToPurchase() {
+            // No automatic redirect needed for subscription system
             return false;
         }
-
+    
         function isNewUser() {
             // This would need to be determined by checking submissions, but for now return false
             return false;
