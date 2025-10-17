@@ -1373,12 +1373,7 @@ document.getElementById('userCount').textContent = totalUsers;
                 }
             }
 
-            // Legacy credits users must subscribe
-            if (currentUserProfile.user_type === 'credits') {
-                alert('Credit-based access has ended. Please subscribe for unlimited evaluations.');
-                showSection('purchase');
-                return;
-            }
+            // Legacy credits user conversion removed - subscription system only
 
             // Student users - check if expired
             if (currentUserProfile.user_type === 'student') {
@@ -1397,21 +1392,17 @@ document.getElementById('userCount').textContent = totalUsers;
 
         async function performEvaluation(formData) {
             // Check student status before proceeding
-if (currentUserProfile.user_type === 'student') {
-    const now = new Date();
-    const expiry = new Date(currentUserProfile.access_expiry);
-    
-    if (expiry <= now) {
-        alert('Your student access has expired. Please wait while we convert your account...');
-        await checkAndConvertExpiredStudent();
-        
-        if (currentUserProfile.credits <= 0) {
-            showSection('purchase');
-            alert('You\'ve been converted to a credits user but need to purchase credits to continue.');
-            return;
-        }
-    }
-}
+            if (currentUserProfile.user_type === 'student') {
+                const now = new Date();
+                const expiry = new Date(currentUserProfile.access_expiry);
+                
+                if (expiry <= now) {
+                    alert('Your student access has expired. Please subscribe to continue.');
+                    await checkAndConvertExpiredStudent();
+                    return;
+                }
+            }
+            
             // If formData not provided, get it from the form
             if (!formData) {
                 formData = {
@@ -1449,9 +1440,6 @@ if (currentUserProfile.user_type === 'student') {
 
                 const data = await response.json();
                 const claudeResponse = data.evaluation;
-
-            // No credit deduction for subscribers - they have unlimited access
-                // Legacy credit users are handled in pre-evaluation checks
                 
              // Save submission to database
 const submissionResult = await window.dbHelpers.createSubmission(
@@ -2331,7 +2319,7 @@ const submissionResult = await window.dbHelpers.createSubmission(
             window.location.href = cleanUrl;
         }
 
-        async function checkAndConvertExpiredStudent() {
+       async function checkAndConvertExpiredStudent() {
     if (!currentUserProfile || currentUserProfile.user_type !== 'student') {
         return; // Not a student, no conversion needed
     }
@@ -2565,45 +2553,7 @@ The BRS Labs Team`,
     }
 }
 
-async function updateUserCredits() {
-    const userId = document.getElementById('userManagementResult').dataset.userId;
-    const credits = parseInt(document.getElementById('setCredits').value);
-    
-    if (!userId) {
-        alert('Please search for a user first');
-        return;
-    }
-    
-    if (isNaN(credits) || credits < 0) {
-        alert('Please enter a valid number of credits (0 or higher)');
-        return;
-    }
-    
-    try {
-        // Update user to credits type and set credits
-        const updateResult = await window.supabase
-            .from('user_profiles')
-            .update({
-                user_type: 'credits',
-                credits: credits,
-                access_expiry: null
-            })
-            .eq('id', userId)
-            .select()
-            .single();
-        
-        if (!updateResult.error) {
-            alert(`Credits set successfully to ${credits}. User converted to credits type.`);
-            // Refresh the search to show updated info
-            document.getElementById('searchUserBtn').click();
-            document.getElementById('setCredits').value = '';
-        } else {
-            alert('Failed to update credits: ' + updateResult.error.message);
-        }
-    } catch (error) {
-        alert('Failed to update credits: ' + error.message);
-    }
-}
+// updateUserCredits function removed - subscription system only
 
         async function setUserTime() {
     const userEmail = document.getElementById('userManagementResult').dataset.userEmail;
