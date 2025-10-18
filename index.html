@@ -690,17 +690,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         return; // Exit early, don't load normal app
     }
 
-     // ADD THIS NEW SECTION FOR PAYMENT SUCCESS
-    const paymentSuccess = urlParams.get('payment');
-    const sessionId = urlParams.get('session_id');
-    const creditAmount = urlParams.get('amount');
-    const userId = urlParams.get('user_id');
-
-    if (paymentSuccess === 'success' && sessionId && creditAmount && userId) {
-        handlePaymentSuccess(sessionId, userId, parseInt(creditAmount));
-        return; // Exit early to handle payment success
-    }
-    // END NEW SECTION
+     // Payment success handled via Stripe webhooks (no client-side handling needed)
     
     // Check for customer portal return
 const portalReturn = urlParams.get('portal');
@@ -1076,7 +1066,7 @@ if (!limitCheck.allowed) {
                     }
                 }
                 
-                // Step 5: Admins have unlimited access by default (no special setup needed)
+                // Step 5: All user setup complete
                 
                 // Step 6: Set current user data
                 currentUser = authResult.data.user;
@@ -1985,7 +1975,7 @@ const submissionResult = await window.dbHelpers.createSubmission(
         const codesResult = { success: true, data: result.codes };
         
         // Create CSV content with proper user lookup
-        const headers = ['Code', 'Type', 'Months', 'Credits', 'Created Date', 'Status', 'Used By Email', 'Used Date', 'Times Used'];
+        const headers = ['Code', 'Type', 'Months', 'Created Date', 'Status', 'Used By Email', 'Used Date', 'Times Used'];
         
         // We need to get user emails for the used_by IDs
         const usersResult = await window.dbHelpers.getAllUsers();
@@ -2002,14 +1992,12 @@ const submissionResult = await window.dbHelpers.createSubmission(
                 code.code,
                 code.code_type,
                 code.months || '',
-                code.credits || '',
                 formatDate(code.created_at),
                 code.used ? 'Used' : 'Available',
                 code.used_by ? userEmailMap[code.used_by] || 'Unknown User' : '',
                 code.used_at ? formatDate(code.used_at) : '',
                 code.times_used || 0
             ].join(','))
-        ].join('\n');
         
         // Create and download file
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -2189,102 +2177,7 @@ const submissionResult = await window.dbHelpers.createSubmission(
             }
         }
 
-        async function handlePaymentSuccess(sessionId, userId, expectedAmount) {
-            try {
-                // Show loading state
-                document.body.innerHTML = `
-                    <div class="min-h-screen bg-gray-50 flex items-center justify-center">
-                        <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-                            <div class="spinner mx-auto mb-4" style="width: 40px; height: 40px;"></div>
-                            <h2 class="text-xl font-semibold text-gray-900 mb-2">Processing your payment...</h2>
-                            <p class="text-gray-600">Please wait while we verify your purchase.</p>
-                        </div>
-                    </div>
-                `;
-
-                // Verify payment with our backend
-                const response = await fetch('/.netlify/functions/handle-payment-success', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        sessionId: sessionId,
-                        userId: userId,
-                        expectedAmount: expectedAmount
-                    })
-                });
-
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.error || 'Payment verification failed');
-                }
-
-                // Payment verified successfully, add credits to user account in Supabase
-                if (window.dbHelpers) {
-                    const userResult = await window.dbHelpers.getUserProfile(userId);
-                    if (userResult.success) {
-                        const newCredits = userResult.data.credits + result.creditAmount;
-                        await window.dbHelpers.updateUserCredits(userId, newCredits);
-                    }
-                }
-
-                // Show success message
-                document.body.innerHTML = `
-                    <div class="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
-                        <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-                            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                            </div>
-                            <h2 class="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
-                            <p class="text-gray-600 mb-4">
-                                ${result.creditAmount} credits have been added to your account.
-                            </p>
-                            <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                                <p class="text-sm text-gray-600">
-                                    Payment Amount: $${result.paymentAmount}<br>
-                                    Credits Added: ${result.creditAmount}<br>
-                                    Email: ${result.customerEmail}
-                                </p>
-                            </div>
-                            <button onclick="redirectToApp()" 
-                                    class="w-full py-3 px-4 bg-red-600 text-white font-medium rounded-md hover:bg-red-700"
-                                    style="background-color: #d9042b;">
-                                Continue to Logline Evaluator
-                            </button>
-                        </div>
-                    </div>
-                `;
-
-            } catch (error) {
-                console.error('Payment processing error:', error);
-                
-                // Show error message
-                document.body.innerHTML = `
-                    <div class="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
-                        <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-                            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </div>
-                            <h2 class="text-2xl font-bold text-gray-900 mb-2">Payment Processing Error</h2>
-                            <p class="text-gray-600 mb-6">
-                                There was an issue processing your payment. Please contact support if you were charged.
-                            </p>
-                            <p class="text-sm text-gray-500 mb-6">Error: ${error.message}</p>
-                            <button onclick="redirectToApp()" 
-                                    class="w-full py-3 px-4 bg-gray-600 text-white font-medium rounded-md hover:bg-gray-700">
-                                Return to App
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
-        }
+       // handlePaymentSuccess function removed - subscriptions handled via Stripe webhooks
 
         function redirectToApp() {
             // Clean URL and redirect to main app
