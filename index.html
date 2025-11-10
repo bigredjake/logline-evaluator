@@ -1986,7 +1986,7 @@ const submissionResult = await window.dbHelpers.createSubmission(
             });
         }
         
-        const csvContent = [
+       const csvContent = [
             headers.join(','),
             ...codesResult.data.map(code => [
                 code.code,
@@ -1998,6 +1998,7 @@ const submissionResult = await window.dbHelpers.createSubmission(
                 code.used_at ? formatDate(code.used_at) : '',
                 code.times_used || 0
             ].join(','))
+        ].join('\n');
         
         // Create and download file
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
