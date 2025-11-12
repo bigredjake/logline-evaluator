@@ -36,8 +36,8 @@ exports.handler = async (event, context) => {
       discounts: [{
         coupon: 'HLjYDRRq',
       }],
-      success_url: `${process.env.BRANCH_URL || process.env.URL}?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.BRANCH_URL || process.env.URL}?subscription=cancelled`,
+      success_url: `https://logline-evaluator.netlify.app?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://logline-evaluator.netlify.app?subscription=cancelled`,
     });
 
     return {
