@@ -1,0 +1,195 @@
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { createClient } = require('@supabase/supabase-js');
+
+exports.handler = async (event, context) => {
+  // Only allow POST requests
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' })
+    };
+  }
+
+  const sig = event.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let stripeEvent;
+
+  try {
+    // Verify webhook signature
+    stripeEvent = stripe.webhooks.constructEvent(event.body, sig, webhookSecret);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: `Webhook Error: ${err.message}` })
+    };
+  }
+
+  // Initialize Supabase with service role key for RLS bypass
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
+  );
+
+  // Handle the event
+  try {
+    switch (stripeEvent.type) {
+    case 'checkout.session.completed': {
+        const session = stripeEvent.data.object;
+        const userId = session.metadata.userId;
+        const subscriptionId = session.subscription;
+        const stripeCustomerId = session.customer;
+        const customerEmail = session.customer_email || session.customer_details?.email;
+        
+        // Update user to subscriber type with subscription ID and customer ID
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({
+            user_type: 'subscriber',
+            subscription_id: subscriptionId,
+            stripe_customer_id: stripeCustomerId,
+            subscription_status: 'active',
+            last_payment_date: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId);
+        
+        if (error) {
+          console.error('Error updating user after checkout:', error);
+          throw error;
+        }
+        
+       console.log(`User ${userId} subscribed with subscription ${subscriptionId}`);
+        
+        break;
+      }
+
+   case 'customer.subscription.updated': {
+        const subscription = stripeEvent.data.object;
+        const subscriptionId = subscription.id;
+        const status = subscription.status;
+        
+        // Check if subscription is set to cancel at period end
+        let updateData = {
+          subscription_status: status,
+          updated_at: new Date().toISOString()
+        };
+        
+        if (subscription.cancel_at_period_end) {
+          // User canceled but still has access until period end
+          const periodEnd = new Date(subscription.current_period_end * 1000);
+          updateData.access_expiry = periodEnd.toISOString();
+          console.log(`Subscription ${subscriptionId} will cancel on ${periodEnd.toISOString()}`);
+        } else if (subscription.status === 'active') {
+          // Subscription is active and not canceling - clear access_expiry
+          updateData.access_expiry = null;
+        }
+        
+        const { error } = await supabase
+          .from('user_profiles')
+          .update(updateData)
+          .eq('subscription_id', subscriptionId);
+        
+        if (error) {
+          console.error('Error updating subscription:', error);
+          throw error;
+        }
+        
+        console.log(`Subscription ${subscriptionId} updated to status: ${status}`);
+        break;
+      }
+      
+      case 'customer.subscription.deleted': {
+        const subscription = stripeEvent.data.object;
+        const subscriptionId = subscription.id;
+        
+        // Subscription has actually ended - set status to canceled
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({
+            subscription_status: 'canceled',
+            updated_at: new Date().toISOString()
+          })
+          .eq('subscription_id', subscriptionId);
+        
+        if (error) {
+          console.error('Error updating canceled subscription:', error);
+          throw error;
+        }
+        
+        console.log(`Subscription ${subscriptionId} canceled and ended`);
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = stripeEvent.data.object;
+        const subscriptionId = invoice.subscription;
+
+        // Update user status to past_due when payment fails
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({
+            subscription_status: 'past_due',
+            updated_at: new Date().toISOString()
+          })
+          .eq('subscription_id', subscriptionId);
+
+        if (error) {
+          console.error('Error updating user after payment failure:', error);
+          throw error;
+        }
+
+        console.log(`Payment failed for subscription ${subscriptionId} - status set to past_due`);
+        break;
+      }
+
+        case 'invoice.paid': {
+        const invoice = stripeEvent.data.object;
+        const subscriptionId = invoice.subscription;
+        
+        // Only process subscription invoices (not one-time payments)
+        if (!subscriptionId) {
+          console.log('Invoice paid but not for a subscription, skipping');
+          break;
+        }
+        
+        // Update last_payment_date when subscription renews successfully
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({
+            subscription_status: 'active',
+            last_payment_date: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('subscription_id', subscriptionId);
+        
+        if (error) {
+          console.error('Error updating user after successful renewal:', error);
+          throw error;
+        }
+        
+        console.log(`Subscription ${subscriptionId} renewed successfully - last_payment_date updated`);
+        break;
+      }
+
+      default:
+        console.log(`Unhandled event type: ${stripeEvent.type}`);
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ received: true })
+    };
+
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ 
+        error: 'Webhook processing failed',
+        details: error.message 
+      })
+    };
+  }
+};

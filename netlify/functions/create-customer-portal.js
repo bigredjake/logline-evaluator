@@ -1,4 +1,4 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); 
 
 exports.handler = async (event, context) => {
   if (event.httpMethod !== 'POST') {
@@ -31,7 +31,7 @@ exports.handler = async (event, context) => {
     // Create customer portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${process.env.URL}?portal=return`,
+      return_url: `${process.env.BRANCH_URL || process.env.URL}?portal=return`,
     });
 
     return {
