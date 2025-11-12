@@ -1064,10 +1064,25 @@ if (!limitCheck.allowed) {
                     if (!codeUseResult.success) {
                         console.warn('Failed to mark student code as used:', codeUseResult.error);
                     }
+                } else {
+                    // No student code - set as subscriber requiring payment
+                    const subscriberUpdateResult = await window.supabase
+                        .from('user_profiles')
+                        .update({
+                            user_type: 'subscriber',
+                            subscription_status: 'inactive',
+                            credits: 0
+                        })
+                        .eq('id', newUserId)
+                        .select()
+                        .single();
+                    
+                    if (!subscriberUpdateResult.error) {
+                        userProfile = subscriberUpdateResult.data;
+                    }
                 }
                 
-                // Step 5: All user setup complete
-                
+                // Step 5: All user setup complete                
                 // Step 6: Set current user data
                 currentUser = authResult.data.user;
                 currentUserProfile = userProfile;
