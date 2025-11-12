@@ -1122,6 +1122,9 @@ showApp();
     document.getElementById('authSection').classList.add('hidden');
     document.getElementById('appSection').classList.remove('hidden');
     
+    // Clear the logline form for privacy (fresh start for each session)
+    clearLoglineForm();
+    
     // Check if student user has expired and needs conversion
     await checkAndConvertExpiredStudent();
     
