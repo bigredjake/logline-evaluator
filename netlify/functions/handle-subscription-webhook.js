@@ -1,4 +1,4 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY_TEST);
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async (event, context) => {
@@ -11,7 +11,7 @@ exports.handler = async (event, context) => {
   }
 
   const sig = event.headers['stripe-signature'];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET_TEST;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   let stripeEvent;
 
