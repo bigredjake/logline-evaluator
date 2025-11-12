@@ -1354,12 +1354,22 @@ document.getElementById('userCount').textContent = totalUsers;
             // Legacy credits user conversion removed - subscription system only
 
             // Student users - check if expired
+            // Student users - check if expired
             if (currentUserProfile.user_type === 'student') {
                 if (new Date(currentUserProfile.access_expiry) < new Date()) {
                     alert('Your student access has expired. Please subscribe to continue.');
                     showSection('purchase');
                     return;
                 }
+            }
+
+            // Block legacy 'credits' users or unknown types
+            if (currentUserProfile.user_type !== 'subscriber' && 
+                currentUserProfile.user_type !== 'student' && 
+                currentUserProfile.user_type !== 'admin') {
+                alert('Please subscribe to continue using the Logline Evaluator.');
+                showSection('purchase');
+                return;
             }
 
             // Admin and valid students/subscribers proceed directly
