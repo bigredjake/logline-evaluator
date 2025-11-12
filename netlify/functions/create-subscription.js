@@ -30,10 +30,13 @@ exports.handler = async (event, context) => {
         },
       ],
       customer_email: userEmail,
-      metadata: {
+     metadata: {
         userId: userId,
       },
-     success_url: `${process.env.BRANCH_URL || process.env.URL}?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
+      discounts: [{
+        coupon: 'HLjYDRRq',
+      }],
+      success_url: `${process.env.BRANCH_URL || process.env.URL}?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.BRANCH_URL || process.env.URL}?subscription=cancelled`,
     });
 
