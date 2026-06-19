@@ -2371,8 +2371,14 @@ The BRS Labs Team`,
 }
         
        function shouldRedirectToPurchase() {
-            // No automatic redirect needed for subscription system
-            return false;
+            if (!currentUserProfile) return false;
+            if (currentUserProfile.user_type === 'admin') return false;
+            if (currentUserProfile.user_type === 'subscriber' && currentUserProfile.subscription_status === 'active') return false;
+            if (currentUserProfile.user_type === 'student') {
+                if (!currentUserProfile.access_expiry) return false;
+                if (new Date(currentUserProfile.access_expiry) > new Date()) return false;
+            }
+            return true;
         }
     
         function isNewUser() {
