@@ -1872,51 +1872,74 @@ const submissionResult = await window.dbHelpers.createSubmission(
             }
         }
 
-        async function updateEmail() {
+       async function updateEmail() {
             const newEmail = document.getElementById('newEmail').value;
-
             // Validation
             if (!newEmail) {
                 alert('Please enter a new email address');
                 return;
             }
-
             // Basic email validation
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(newEmail)) {
                 alert('Please enter a valid email address');
                 return;
             }
-
-            // TODO: Implement email update via Supabase auth
-            alert('Email update functionality requires Supabase auth flow setup. Please contact support.');
+            
+            const { data, error } = await window.supabase.auth.updateUser({
+                email: newEmail
+            });
+            
+            if (error) {
+                alert('Failed to update email: ' + error.message);
+                return;
+            }
+            
+            alert('Confirmation emails sent to both your old and new email addresses. Please check both inboxes and click the confirmation links to complete the change.');
         }
-
+    
         async function updatePassword() {
             const currentPassword = document.getElementById('currentPassword').value;
             const newPassword = document.getElementById('newPassword').value;
             const confirmNewPassword = document.getElementById('confirmNewPassword').value;
-
             // Validation
             if (!currentPassword || !newPassword || !confirmNewPassword) {
                 alert('Please fill in all password fields');
                 return;
             }
-
             // Check new password confirmation
             if (newPassword !== confirmNewPassword) {
                 alert('New passwords do not match');
                 return;
             }
-
             // Validate new password strength
             if (!validatePassword(newPassword)) {
                 alert('New password does not meet requirements: 8+ characters, uppercase, lowercase, number, special character');
                 return;
             }
-
-            // TODO: Implement password update via Supabase auth
-            alert('Password update functionality requires Supabase auth flow setup. Please contact support.');
+            
+            // Verify current password by re-authenticating
+            const { data: signInData, error: signInError } = await window.supabase.auth.signInWithPassword({
+                email: currentUser.email,
+                password: currentPassword
+            });
+            
+            if (signInError) {
+                alert('Current password is incorrect');
+                return;
+            }
+            
+            // Update to new password
+            const { data, error } = await window.supabase.auth.updateUser({
+                password: newPassword
+            });
+            
+            if (error) {
+                alert('Failed to update password: ' + error.message);
+                return;
+            }
+            
+            alert('Password updated successfully!');
         }
 
         async function managePayment() {
