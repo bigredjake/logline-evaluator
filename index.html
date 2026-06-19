@@ -888,9 +888,16 @@ async function updatePasswordFromReset(token) {
         return;
     }
     
-    // TODO: In real implementation, validate token and update password via Supabase
-    // For now, we'll just redirect to login
-    alert('Password reset functionality requires Supabase auth flow setup. Please contact support.');
+    const { data, error } = await window.supabase.auth.updateUser({
+        password: newPassword
+    });
+    
+    if (error) {
+        alert('Failed to update password: ' + error.message);
+        return;
+    }
+    
+    alert('Password updated successfully! Please log in with your new password.');
     window.location.href = window.location.origin;
 }
 
