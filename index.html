@@ -680,13 +680,14 @@ async function checkRegistrationLimit() {
 
     // Initialize app
 document.addEventListener('DOMContentLoaded', async function() {
-    // Check for password reset token in URL FIRST
-    const urlParams = new URLSearchParams(window.location.search);
-    const resetToken = urlParams.get('reset');
+    // Check for Supabase password recovery in the URL hash
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get('type');
+    const accessToken = hashParams.get('access_token');
     
-    if (resetToken) {
+    if (type === 'recovery' && accessToken) {
         // Show password reset form instead of normal login
-        showPasswordResetForm(resetToken);
+        showPasswordResetForm(accessToken);
         return; // Exit early, don't load normal app
     }
 
