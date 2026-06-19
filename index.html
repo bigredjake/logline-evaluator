@@ -694,6 +694,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      // Payment success handled via Stripe webhooks (no client-side handling needed)
     
     // Check for customer portal return
+const urlParams = new URLSearchParams(window.location.search);
 const portalReturn = urlParams.get('portal');
 if (portalReturn === 'return') {
     // Clean the URL and show a success message
